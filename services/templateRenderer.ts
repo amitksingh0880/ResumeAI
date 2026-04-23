@@ -358,6 +358,12 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
     b, strong { font-weight: 700; color: #000; }
   `;
 
+  const formatText = (str: string) => {
+    return str
+      .replace(/\\textbf{([^}]+)}/g, "<strong>$1</strong>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  };
+
   const sections = ast.sections.map((sec) => {
     const isSkills = sec.title.toLowerCase().includes("skills");
     
@@ -365,9 +371,9 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
       if (item.type === "job") {
         const j = item as ResumeJob;
 
-        // If this is in the skills section, format it as a skill row (because parser treats \subsection as job)
+        // If this is in the skills section, format it as a skill row
         if (isSkills) {
-           return `<tr><td class="skills-cat">${j.title}:</td><td>${j.bullets.join(", ")}</td></tr>`;
+           return `<tr><td class="skills-cat">${formatText(j.title)}:</td><td>${formatText(j.bullets.join(", "))}</td></tr>`;
         }
 
         let date = j.date;
@@ -402,7 +408,7 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
            realBullets = j.bullets;
         }
 
-        const displayTitle = extra ? `${j.title} | <span style="font-weight:normal">${extra}</span>` : j.title;
+        const displayTitle = extra ? `${formatText(j.title)} | <span style="font-weight:normal">${formatText(extra)}</span>` : formatText(j.title);
         
         return `
           <div class="entry">
@@ -412,21 +418,21 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
             </div>
             ${company || location ? `
             <div class="entry-sub">
-              <span>${company}</span>
+              <span>${formatText(company)}</span>
               <span>${location}</span>
             </div>` : ""}
-            ${realBullets.length > 0 ? `<ul>${realBullets.map((b) => `<li>${b}</li>`).join("")}</ul>` : ""}
+            ${realBullets.length > 0 ? `<ul>${realBullets.map((b) => `<li>${formatText(b)}</li>`).join("")}</ul>` : ""}
           </div>`;
       }
       
       if (isSkills && item.type === "skillgroup") {
         const s = item as ResumeSkillGroup;
-        return `<tr><td class="skills-cat">${s.category}:</td><td>${s.items.join(", ")}</td></tr>`;
+        return `<tr><td class="skills-cat">${formatText(s.category)}:</td><td>${formatText(s.items.join(", "))}</td></tr>`;
       }
       if (item.type === "skill" && !isSkills) {
-         return `<ul><li>${item.name}</li></ul>`;
+         return `<ul><li>${formatText(item.name)}</li></ul>`;
       } else if (item.type === "skill" && isSkills) {
-         return `<tr><td class="skills-cat"></td><td>${item.name}</td></tr>`;
+         return `<tr><td class="skills-cat"></td><td>${formatText(item.name)}</td></tr>`;
       }
       
       if (item.type === "degree") {
@@ -434,16 +440,16 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
         return `
           <div class="entry">
             <div class="entry-main">
-              <span class="entry-title">${d.name}</span>
+              <span class="entry-title">${formatText(d.name)}</span>
               <span class="entry-date">${d.year}</span>
             </div>
             <div class="entry-sub">
-              <span>${d.school}</span>
+              <span>${formatText(d.school)}</span>
               <span></span>
             </div>
           </div>`;
       }
-      if (item.type === "bullet") return `<ul><li>${item.text}</li></ul>`;
+      if (item.type === "bullet") return `<ul><li>${formatText(item.text)}</li></ul>`;
       return "";
     }).join("");
 

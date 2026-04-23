@@ -78,7 +78,7 @@ export default function AddSkillModal() {
   async function handleAccept() {
     if (!result || !doc) return;
     await updateDocumentSource(doc.id, result.updatedSource, `Added skill: ${skill}`);
-    router.dismiss();
+    router.back();
   }
 
   return (
@@ -93,7 +93,7 @@ export default function AddSkillModal() {
             {step === "input" ? "Add a Skill" : "Preview Changes"}
           </Text>
         </View>
-        <TouchableOpacity onPress={() => router.dismiss()} activeOpacity={0.7} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={{ padding: 4 }}>
           <LucideX color="#8E8E93" size={22} />
         </TouchableOpacity>
       </View>

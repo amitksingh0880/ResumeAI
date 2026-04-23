@@ -30,10 +30,7 @@ export default function RootLayout() {
           name="(modals)/add-skill"
           options={{ presentation: "modal", animation: "slide_from_bottom" }}
         />
-        <Stack.Screen
-          name="(modals)/ai-diff"
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
+
         <Stack.Screen
           name="(modals)/template-switcher"
           options={{ presentation: "modal", animation: "slide_from_bottom" }}

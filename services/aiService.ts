@@ -27,7 +27,8 @@ async function callAI(passedApiKey: string, prompt: string) {
           content: prompt
         }
       ],
-      temperature: 0.1
+      temperature: 0.1,
+      max_tokens: 4000
     })
   });
 
@@ -73,7 +74,7 @@ export interface AIBulletSuggestion {
   reason: string;
 }
 
-// ─── Skill Insertion ─────────────────────────────────────────────────────────
+// --- Skill Insertion ---------------------------------------------------------
 
 export async function insertSkillIntoResume(
   apiKey: string,
@@ -81,59 +82,70 @@ export async function insertSkillIntoResume(
   skill: string,
   userRole: string
 ): Promise<SkillInsertionResult> {
-  const prompt = `You are a professional resume writer and LaTeX expert. You are working with a custom resume DSL (domain-specific language) that uses LaTeX-like syntax.
+  const prompt = `You are a professional resume writer and LaTeX expert.
+TASK: Insert the following NEW SKILL into the resume DSL source provided below.
 
-The DSL commands are:
-- \\name{}, \\role{}, \\contact{}, \\summary{}
-- \\section{title} — starts a new section
-- \\job{title}{company}{date} — a job entry
-- \\bullet{text} — bullet point under a job or section
-- \\skillgroup{category}{item1, item2, item3} — skills grouped by category
-- \\skill{name} — standalone skill
-- \\degree{name}{school}{year} — education
-- \\cert{name}{issuer}{year} — certification
+NEW SKILL TO ADD: "${skill}"
+USER'S CURRENT ROLE: ${userRole || "Software Engineer"}
+
+INSTRUCTIONS:
+1. Identify the best location (existing \\skillgroup, new \\skillgroup, or as a \\bullet in experience).
+2. Do NOT duplicate existing skills.
+3. Maintain the custom DSL syntax (\\name, \\role, \\job, \\bullet, \\skillgroup, etc.).
+4. Return the COMPLETE modified source.
 
 CURRENT RESUME SOURCE:
 \`\`\`
 ${currentSource}
 \`\`\`
 
-USER'S CURRENT ROLE: ${userRole || "Software Engineer"}
+RESPONSE FORMAT (STRICT):
+You must respond using this exact structure:
 
-NEW SKILL TO ADD: "${skill}"
+[EXPLANATION]
+Brief summary of what was added and why.
+[/EXPLANATION]
 
-INSTRUCTIONS:
-1. Analyze where this skill best fits in the resume
-2. If a matching \\skillgroup exists (e.g., skill is "Docker" → find DevOps/Tools group), add it there
-3. If no matching group exists, create a new appropriate \\skillgroup or add as \\skill
-4. If the skill is best expressed as a bullet point in experience, add a relevant \\bullet
-5. Do NOT duplicate existing skills
-6. Return the COMPLETE modified DSL source with the skill properly inserted
-7. Be natural and professional — don't just blindly append
+[PLACEMENT]
+Specific location of the insertion.
+[/PLACEMENT]
 
-RESPOND WITH VALID JSON ONLY (no markdown code blocks):
-{
-  "updatedSource": "the complete modified DSL source",
-  "explanation": "brief explanation of what was changed and why",
-  "placement": "exact description of where the skill was placed",
-  "confidence": 0.95
-}`;
+[SOURCE]
+The complete modified DSL source code.
+[/SOURCE]`;
 
   try {
     const text = await callAI(apiKey, prompt);
-    // Parse JSON response (strip any accidental markdown)
-    const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
-    const parsed = JSON.parse(jsonStr);
+    
+    // Parse tag-based response - making closing tags optional and preventing bleeding into next tags
+    const sourceMatch = text.match(/\[SOURCE\]([\s\S]*?)(?:\[\/SOURCE\]|$)/i);
+    const explanationMatch = text.match(/\[EXPLANATION\]([\s\S]*?)(?:\[\/EXPLANATION\]|(?=\[PLACEMENT\])|(?=\[SOURCE\])|$)/i);
+    const placementMatch = text.match(/\[PLACEMENT\]([\s\S]*?)(?:\[\/PLACEMENT\]|(?=\[SOURCE\])|$)/i);
+
+    if (!sourceMatch || !sourceMatch[1].trim()) {
+      console.error("AI Response missing [SOURCE] content. Raw response:", text);
+      throw new Error("AI failed to return the modified source code in [SOURCE] tags.");
+    }
+
+    const updatedSource = sourceMatch[1].trim()
+      .replace(/^```[a-zA-Z]*\n?/, "")
+      .replace(/\n?```$/, "")
+      .replace(/^"""\n?/, "")
+      .replace(/\n?"""$/, "")
+      .trim();
+    
+    const explanation = explanationMatch ? explanationMatch[1].trim() : "Skill added.";
+    const placement = placementMatch ? placementMatch[1].trim() : "Unknown";
 
     // Compute diff
-    const diff = computeDiff(currentSource, parsed.updatedSource);
+    const diff = computeDiff(currentSource, updatedSource);
 
     return {
-      updatedSource: parsed.updatedSource,
+      updatedSource,
       diff,
-      explanation: parsed.explanation,
-      confidence: parsed.confidence ?? 0.9,
-      placement: parsed.placement,
+      explanation,
+      confidence: 0.95,
+      placement,
     };
   } catch (error: any) {
     console.error("AI Skill Insertion Error:", error);
@@ -141,7 +153,7 @@ RESPOND WITH VALID JSON ONLY (no markdown code blocks):
   }
 }
 
-// ─── Job Match Scorer ────────────────────────────────────────────────────────
+// --- Job Match Scorer --------------------------------------------------------
 
 export async function scoreJobMatch(
   apiKey: string,
@@ -184,7 +196,7 @@ RESPOND WITH VALID JSON ONLY:
   }
 }
 
-// ─── Bullet Strengthener ─────────────────────────────────────────────────────
+// --- Bullet Strengthener -----------------------------------------------------
 
 export async function strengthenBullets(
   apiKey: string,
@@ -255,7 +267,7 @@ Return ONLY the DSL source code, no explanation.`;
   }
 }
 
-// ─── Diff Engine (Myers Algorithm) ──────────────────────────────────────────
+// --- Diff Engine (Myers Algorithm) ------------------------------------------
 
 export function computeDiff(oldText: string, newText: string): DiffLine[] {
   const oldLines = oldText.split("\n");
@@ -289,7 +301,7 @@ export function computeDiff(oldText: string, newText: string): DiffLine[] {
   return diff;
 }
 
-// ─── Magic Rewrite ──────────────────────────────────────────────────────────
+// --- Magic Rewrite ----------------------------------------------------------
 
 export async function magicRewrite(
   apiKey: string,
@@ -323,7 +335,7 @@ export async function magicRewrite(
   }
 }
 
-// ─── Career Roadmap ─────────────────────────────────────────────────────────
+// --- Career Roadmap ---------------------------------------------------------
 
 export interface CareerStep {
   role: string;
@@ -390,7 +402,7 @@ export async function convertResumeWithStyle(apiKey: string, rawText: string): P
     3. Be faithful to the original data. Preserve every project, skill, and date found.
     
     TASK:
-    1. Convert the content into our Resume DSL format (the LaTeX-like structure with \name, \role, \contact, \summary, and \section).
+    1. Convert the content into our Resume DSL format (the LaTeX-like structure with \\name, \\role, \\contact, \\summary, and \\section).
     2. Analyze the likely layout of the original resume from the text (e.g. is it centered? two-column? minimalist?).
     3. Generate a CSS block that would make an HTML version of this DSL look like the original.
        Use these classes in your CSS: .header, .section-title, .job-header, .job-title, .job-company, .job-date, .skill-row, .skill-cat.
@@ -409,8 +421,8 @@ export async function convertResumeWithStyle(apiKey: string, rawText: string): P
 
   try {
     const text = await callAI(apiKey, prompt);
-    const dslMatch = text.match(/\[DSL\]([\s\S]*?)\[\/DSL\]/);
-    const cssMatch = text.match(/\[CSS\]([\s\S]*?)\[\/CSS\]/);
+    const dslMatch = text.match(/\[DSL\]([\s\S]*?)\[\/DSL\]/i);
+    const cssMatch = text.match(/\[CSS\]([\s\S]*?)\[\/CSS\]/i);
 
     const dsl = dslMatch ? dslMatch[1].trim() : text;
     const css = cssMatch ? cssMatch[1].trim() : "";

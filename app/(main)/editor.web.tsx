@@ -2,7 +2,7 @@
  * Web-only editor screen. Uses <iframe> and <textarea> instead of
  * react-native-webview which is not supported on web.
  */
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -98,11 +98,22 @@ window.parent.postMessage({ type:'ready' }, '*');
     return () => window.removeEventListener("message", onMsg);
   }, [onChange]);
 
+  // If source changes externally (like from AI Add Skill), we must update the editor!
+  useEffect(() => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      // Small hack: send a message into the iframe to update the value
+      // We don't have a listener inside the iframe for this, so we could just reload the iframe URL
+      // by setting a key on the iframe or let React remount it.
+    }
+  }, [source]);
+
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
 
+  // We add 'key={source.length}' to force a remount of the iframe when external source changes substantially
   return (
     <iframe
+      key={source.length}
       ref={iframeRef}
       src={url}
       style={{ width: "100%", height: "100%", border: "none", background: "#0A0A0A" }}
@@ -132,7 +143,11 @@ export default function EditorScreen() {
   const [rewriting, setRewriting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { loadDoc(); }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadDoc();
+    }, [])
+  );
 
   useEffect(() => {
     if (!source) return;
