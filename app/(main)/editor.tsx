@@ -5,7 +5,7 @@ import {
   Text,
   TextInput,
   ScrollView,
-  Pressable,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -20,7 +20,8 @@ import {
   LucideEye,
   LucideDownload,
 } from "lucide-react-native";
-import { Button, Card } from "@/components/ui";
+
+
 import {
   getActiveDocumentId,
   getDocumentById,
@@ -102,9 +103,9 @@ export default function EditorScreen() {
       {/* Top Header */}
       <View style={{ height: 60, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderColor: "#1F1F1F", paddingHorizontal: 16, justifyContent: "space-between" }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Pressable onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
             <LucideChevronLeft color="#00F0FF" size={24} />
-          </Pressable>
+          </TouchableOpacity>
           <View>
             <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>EDITOR</Text>
             <Text style={{ color: "#444", fontSize: 10, fontWeight: "800" }} numberOfLines={1}>
@@ -113,37 +114,37 @@ export default function EditorScreen() {
           </View>
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Button
-            variant="ghost"
-            title=""
-            icon={saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <LucideSave color="#FFFFFF" size={20} />}
-            onPress={handleSave}
-          />
-          <Button
-            variant="primary"
-            title="EXPORT"
-            size="sm"
-            icon={<LucideDownload color="#000" size={16} />}
-          />
+          <TouchableOpacity onPress={handleSave} activeOpacity={0.7} style={{ padding: 10, alignItems: "center", justifyContent: "center" }}>
+            {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <LucideSave color="#FFFFFF" size={20} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}
+          >
+            <LucideDownload color="#000" size={16} />
+            <Text style={{ color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1, marginLeft: 6 }}>EXPORT</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* View Toggle */}
       <View style={{ flexDirection: "row", padding: 12, gap: 8, backgroundColor: "#121212" }}>
-        <Pressable
+        <TouchableOpacity
           onPress={() => setViewMode("edit")}
+          activeOpacity={0.7}
           style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 36, borderRadius: 4, backgroundColor: viewMode === "edit" ? "#1F1F1F" : "transparent", borderWidth: 1, borderColor: viewMode === "edit" ? "#00F0FF" : "transparent" }}
         >
           <LucideCode color={viewMode === "edit" ? "#00F0FF" : "#444"} size={16} />
           <Text style={{ color: viewMode === "edit" ? "#FFFFFF" : "#444", fontSize: 11, fontWeight: "800" }}>SOURCE</Text>
-        </Pressable>
-        <Pressable
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => setViewMode("preview")}
+          activeOpacity={0.7}
           style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 36, borderRadius: 4, backgroundColor: viewMode === "preview" ? "#1F1F1F" : "transparent", borderWidth: 1, borderColor: viewMode === "preview" ? "#00F0FF" : "transparent" }}
         >
           <LucideEye color={viewMode === "preview" ? "#00F0FF" : "#444"} size={16} />
           <Text style={{ color: viewMode === "preview" ? "#FFFFFF" : "#444", fontSize: 11, fontWeight: "800" }}>RENDER</Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -227,9 +228,9 @@ export default function EditorScreen() {
         )}
       </KeyboardAvoidingView>
 
-      {/* Magic Rewrite FAB */}
-      <Pressable
+      <TouchableOpacity
         onPress={() => router.push("/(main)/roadmap")}
+        activeOpacity={0.8}
         style={{
           position: "absolute",
           bottom: 24,
@@ -240,15 +241,11 @@ export default function EditorScreen() {
           backgroundColor: "#8B5CF6",
           alignItems: "center",
           justifyContent: "center",
-          shadowColor: "#8B5CF6",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.5,
-          shadowRadius: 16,
           elevation: 10,
         }}
       >
         <LucideZap color="#FFFFFF" size={28} />
-      </Pressable>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
