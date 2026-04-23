@@ -51,4 +51,3 @@ The application follows a **Premium Dark** design language inspired by modern de
 
 ---
 
-*Designed with ❤️ by the Antigravity AI Team.*
