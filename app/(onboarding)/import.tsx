@@ -10,8 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { convertTextToDSL } from "@/services/aiService";
-import { getApiKey } from "@/services/storageService";
+import { convertTextToDSL, convertResumeWithStyle } from "@/services/aiService";
+import { getApiKey, saveImportDraft } from "@/services/storageService";
 import { DEFAULT_RESUME_DSL } from "@/services/dslParser";
 import { pickAndReadFile } from "@/services/fileService";
 import {
@@ -49,14 +49,15 @@ export default function ImportScreen() {
   }
 
   // ── Continue ─────────────────────────────────────────────────────────────
-  async function handleContinue() {
+  const handleContinue = async () => {
     const rawText =
       mode === "upload" ? uploadedFile?.text ?? "" :
       mode === "paste"  ? pastedText.trim()         :
       "";
 
     if (mode === "blank") {
-      router.push({ pathname: "/(onboarding)/template-picker", params: { source: DEFAULT_RESUME_DSL } });
+      await saveImportDraft(DEFAULT_RESUME_DSL);
+      router.push({ pathname: "/(onboarding)/template-picker" });
       return;
     }
 
@@ -72,12 +73,13 @@ export default function ImportScreen() {
 
     const apiKey = await getApiKey();
     if (!apiKey) {
-      // No key yet — pass raw text as param, convert later after key is set
+      // No key yet — save raw text as draft, convert later after key is set
+      await saveImportDraft(rawText);
       Alert.alert(
         "No API Key",
-        "A Gemini API key is needed to convert your resume. We'll use the blank template for now — add your key in Settings to unlock AI conversion.",
+        "A Groq API key is needed to convert your resume. We'll use the blank template for now — add your key in Settings to unlock AI conversion.",
         [{ text: "OK", onPress: () =>
-          router.push({ pathname: "/(onboarding)/template-picker", params: { source: DEFAULT_RESUME_DSL, rawText } })
+          router.push({ pathname: "/(onboarding)/template-picker" })
         }]
       );
       return;
@@ -85,15 +87,18 @@ export default function ImportScreen() {
 
     setLoading(true);
     try {
-      const dsl = await convertTextToDSL(apiKey, rawText);
-      router.push({ pathname: "/(onboarding)/template-picker", params: { source: dsl } });
-    } catch {
+      const { dsl, css } = await convertResumeWithStyle(apiKey, rawText);
+      await saveImportDraft(dsl, css);
+      router.push({ pathname: "/(onboarding)/template-picker" });
+    } catch (e) {
+      console.error("AI Conversion Error:", e);
+      await saveImportDraft(DEFAULT_RESUME_DSL);
       Alert.alert("Conversion failed", "AI could not convert your resume. Using blank template.");
-      router.push({ pathname: "/(onboarding)/template-picker", params: { source: DEFAULT_RESUME_DSL } });
+      router.push({ pathname: "/(onboarding)/template-picker" });
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [

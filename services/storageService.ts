@@ -6,6 +6,7 @@ export interface ResumeVersion {
   label: string;
   source: string; // DSL source
   templateId: string;
+  customCSS?: string;
 }
 
 export interface ResumeDocument {
@@ -17,6 +18,7 @@ export interface ResumeDocument {
   updatedAt: number;
   versions: ResumeVersion[];
   apiKey?: string;
+  customCSS?: string;
 }
 
 const KEYS = {
@@ -24,6 +26,8 @@ const KEYS = {
   ACTIVE_ID: "resume:activeId",
   API_KEY: "resume:apiKey",
   ONBOARDING_DONE: "resume:onboardingDone",
+  IMPORT_DRAFT: "resume:importDraft",
+  IMPORT_DRAFT_CSS: "resume:importDraftCSS",
 };
 
 // ─── Documents ─────────────────────────────────────────────────────────────
@@ -61,13 +65,15 @@ export async function getDocumentById(id: string): Promise<ResumeDocument | null
 export async function createDocument(
   title: string,
   source: string,
-  templateId: string
+  templateId: string,
+  customCSS?: string
 ): Promise<ResumeDocument> {
   const doc: ResumeDocument = {
     id: Date.now().toString(),
     title,
     currentSource: source,
     templateId,
+    customCSS,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     versions: [
@@ -77,6 +83,7 @@ export async function createDocument(
         label: "Initial version",
         source,
         templateId,
+        customCSS,
       },
     ],
   };
@@ -144,4 +151,19 @@ export async function setOnboardingDone(): Promise<void> {
 
 export async function clearAllData(): Promise<void> {
   await AsyncStorage.multiRemove(Object.values(KEYS));
+}
+
+// ─── Import Draft ──────────────────────────────────────────────────────────
+
+export async function saveImportDraft(source: string, css?: string): Promise<void> {
+  await AsyncStorage.setItem(KEYS.IMPORT_DRAFT, source);
+  if (css) await AsyncStorage.setItem(KEYS.IMPORT_DRAFT_CSS, css);
+}
+
+export async function getImportDraft(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.IMPORT_DRAFT);
+}
+
+export async function getImportDraftCSS(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.IMPORT_DRAFT_CSS);
 }

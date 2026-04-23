@@ -32,7 +32,7 @@ export default function MatchScreen() {
     }
     const apiKey = await getApiKey();
     if (!apiKey) {
-      Alert.alert("API Key Required", "Add your Gemini API key in Settings.");
+      Alert.alert("API Key Required", "Add your Groq API key in Settings.");
       return;
     }
     const id = await getActiveDocumentId();

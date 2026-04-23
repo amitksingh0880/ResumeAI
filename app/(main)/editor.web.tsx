@@ -138,10 +138,10 @@ export default function EditorScreen() {
     if (!source) return;
     try {
       const ast = parseResumeDSL(source);
-      const html = renderTemplate(doc?.templateId ?? "jakes-cv", ast);
+      const html = renderTemplate(doc?.templateId ?? "jakes-cv", ast, doc?.customCSS);
       setPreviewHtml(html);
     } catch {}
-  }, [source, doc?.templateId]);
+  }, [source, doc?.templateId, doc?.customCSS]);
 
   async function loadDoc() {
     const id = await getActiveDocumentId();
@@ -165,7 +165,7 @@ export default function EditorScreen() {
 
   const handleMagicRewrite = async () => {
     const apiKey = await getApiKey();
-    if (!apiKey) { Alert.alert("Key Required", "Add Gemini Key."); return; }
+    if (!apiKey) { Alert.alert("Key Required", "Add Groq Key."); return; }
     setRewriting(true);
     setTimeout(() => {
        setRewriting(false);

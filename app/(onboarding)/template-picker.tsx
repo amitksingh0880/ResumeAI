@@ -1,20 +1,36 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useState, useEffect } from "react";
+import { ActivityIndicator, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { TEMPLATES } from "@/services/templateRenderer";
 import {
   createDocument,
   setActiveDocumentId,
   setOnboardingDone,
+  getImportDraft,
+  getImportDraftCSS,
 } from "@/services/storageService";
 import { LucideChevronLeft, LucideLayout, LucideCheckCircle2 } from "lucide-react-native";
 
 export default function TemplatePickerScreen() {
-  const { source } = useLocalSearchParams<{ source: string }>();
+  const [source, setSource] = useState("");
+  const [customCSS, setCustomCSS] = useState("");
   const [selected, setSelected] = useState("jakes-cv");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    Promise.all([getImportDraft(), getImportDraftCSS()]).then(([s, css]) => {
+      setSource(s || "");
+      setCustomCSS(css || "");
+      if (css) setSelected("legacy-style"); // Auto-select if we have a style
+      setLoading(false);
+    });
+  }, []);
 
   async function handleCreate() {
-    const doc = await createDocument("My Resume", source || "", selected);
+    if (!source) return;
+    setCreating(true);
+    const doc = await createDocument("My Resume", source, selected, customCSS);
     await setActiveDocumentId(doc.id);
     await setOnboardingDone();
     router.replace("/(main)/dashboard");
@@ -73,12 +89,21 @@ export default function TemplatePickerScreen() {
 
         <TouchableOpacity
           onPress={handleCreate}
+          disabled={loading || creating || !source}
           activeOpacity={0.8}
-          style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingVertical: 18, alignItems: "center" }}
+          style={{ 
+            backgroundColor: (loading || !source) ? "#1A1A1A" : "#00F0FF", 
+            borderRadius: 4, paddingVertical: 18, alignItems: "center",
+            opacity: creating ? 0.7 : 1
+          }}
         >
-          <Text style={{ color: "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
-            INITIALIZE SYSTEM →
-          </Text>
+          {creating ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={{ color: (loading || !source) ? "#444" : "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
+              INITIALIZE SYSTEM →
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

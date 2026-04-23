@@ -1,53 +1,60 @@
-# 🌌 Obsidian Resume Engine
+# ResumeAI Pro
 
-> **The next-generation AI Resume Builder.** Built for developers, designed for impact. Featuring a high-fidelity "Obsidian" aesthetic and a surgical AI rewriting engine.
+A professional, AI-powered resume builder built with React Native (Expo). Create, edit, and optimize your resume using a custom DSL and high-performance AI models.
 
-![Premium UI Dashboard](https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2000&auto=format&fit=crop)
+## 🚀 Features
 
-## ✨ Premium UI Features
+- **✦ AI-Powered Import**: Upload a plain text resume and let AI convert it into our professional DSL format instantly.
+- **✦ Real-time Preview**: See your changes reflected immediately in a premium, stylized resume layout.
+- **✦ Skill Insertion**: Add new skills effortlessly; the AI finds the best spot in your resume to include them naturally.
+- **✦ ATS Scoring**: Paste a job description and get an instant match score with keywords and suggestions.
+- **✦ Growth Roadmap**: Generate a 3-step career growth plan based on your current skills and target role.
+- **✦ Magic Rewrite**: Surgically enhances your experience bullets using Groq (Llama 3.1) to sound more professional and achievement-oriented.
+- **✦ Version Control**: Keep track of different versions of your resume for different job applications.
 
-### 💎 The Obsidian Aesthetic
-The application follows a **Premium Dark** design language inspired by modern developer tools (Vercel, GitHub, Linear):
-- **Glassmorphism**: Translucent "Obsidian Glass" surfaces with backdrop blurs.
-- **Neon Accents**: Cyber Cyan, Electric Indigo, and Royal Purple highlights for AI-driven elements.
-- **Professional Typography**: Using `Inter` for UI and `JetBrains Mono` for code editing to ensure maximum readability.
-- **Obsidian Storage**: Local-first architecture ensuring your data never leaves your device unless you sync it.
+## 🛠️ Technology Stack
 
-### 📊 Intelligence Dashboard
-- **AI Health Score**: A real-time analysis of your resume's strength using a pulsing visual gauge.
-- **Skill Matrix**: Dynamic tracking of your expertise categories.
-- **Quick Actions**: One-tap access to AI rewriting, career roadmaps, and job matching.
+- **Framework**: React Native / Expo (Router v2)
+- **Styling**: NativeWind (Tailwind CSS)
+- **State Management**: React Hooks & Context
+- **AI Engine**: Groq (Llama 3.1 8B Instant)
+- **Storage**: Local-first with AsyncStorage
+- **Deployment**: Web, iOS, Android
 
-### 🛠 IDE-Grade Editor
-- **DSL-Based Authoring**: Edit your resume using a simplified LaTeX-like syntax designed for speed.
-- **Live Render**: Real-time side-by-side preview with professional templates (AltaCV, Jake's CV, etc.).
-- **Auto-Sync**: Background persistence that tracks every keystroke.
+## 📦 Getting Started
 
-## 🤖 AI-Powered Capabilities
+1. **Clone the Repo**: `git clone ...`
+2. **Install Dependencies**: `npm install`
+3. **Set your API Key**: Navigate to `Settings` within the app and paste your Groq API Key.
+4. **Run the App**: `npm run web` (or `npm run android` / `ios`)
 
-- **✦ Magic Rewrite**: Surgically enhances your experience bullets using Gemini 1.5 Pro to sound more professional and achievement-oriented.
-- **🎯 Job Match Scorer**: Upload a JD and get a percentage score with a gap analysis of missing keywords.
-- **📈 Career Roadmap**: Analyzes your current skills and generates a 3-step growth path for your next role.
-- **📂 Smart Skill Insertion**: Automatically categorizes and inserts new skills into the correct resume section.
+## 📄 DSL Syntax Reference
 
-## 🚀 Tech Stack
+The app uses a custom DSL for resume structure:
 
-- **Core**: React Native + Expo (SDK 54)
-- **Styling**: NativeWind v4 (Tailwind CSS)
-- **Animation**: React-Native-Reanimated (60fps layout transitions)
-- **AI Engine**: Google Gemini 1.5 Flash
-- **Icons**: Lucide React Native
-- **Storage**: @react-native-async-storage/async-storage
+```latex
+\resumestart
+\name{John Doe}
+\role{Senior Software Engineer}
+\contact{john@example.com} \contact{linkedin.com/in/johndoe}
 
-## 🛠 Getting Started
+\summary{Experienced engineer with a focus on scalable web systems...}
 
-1. **Clone the repo**
-2. **Install dependencies**: `npm install`
-3. **Set your API Key**: Navigate to `Settings` within the app and paste your Google Gemini API Key.
-4. **Launch**:
-   - Web: `npm run web`
-   - Android: `npm run android`
-   - iOS: `npm run ios`
+\section{Experience}
+\job{Lead Developer}{Tech Corp}{2021 -- Present}
+\bullet{Architected a microservices platform handling 1M+ req/day.}
 
----
+\section{Skills}
+\skillgroup{Languages}{TypeScript, Go, Python}
+\skillgroup{Tools}{Docker, K8s, AWS}
 
+\resumeend
+```
+
+## 🔐 Privacy
+
+All resume data is stored locally on your device. AI processing is performed via Groq's secure API using your personal API key.
+
+## 📄 License
+
+MIT

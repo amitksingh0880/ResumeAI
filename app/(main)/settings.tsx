@@ -21,7 +21,7 @@ export default function SettingsScreen() {
 
   async function handleSaveKey() {
     if (!apiKey.trim()) {
-      Alert.alert("Empty key", "Please enter your Gemini API key.");
+      Alert.alert("Empty key", "Please enter your Groq API key.");
       return;
     }
     await saveApiKey(apiKey.trim());
@@ -59,7 +59,7 @@ export default function SettingsScreen() {
     ["App", "ResumeAI Pro"],
     ["Version", "1.0.0"],
     ["Storage", "Local (AsyncStorage)"],
-    ["AI Engine", "Google Gemini 1.5 Flash"],
+    ["AI Engine", "Groq (Llama 3.1)"],
   ];
 
   return (
@@ -78,10 +78,10 @@ export default function SettingsScreen() {
 
         {/* API Key */}
         <View style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16 }}>
-          <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13, marginBottom: 4, letterSpacing: 0.5 }}>GEMINI API KEY</Text>
+          <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13, marginBottom: 4, letterSpacing: 0.5 }}>GROQ API KEY</Text>
           <Text style={{ color: "#8E8E93", fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
-            Required for AI features. Get a free key at{" "}
-            <Text style={{ color: "#00F0FF" }}>aistudio.google.com</Text>
+            Required for AI features. Get your key at{" "}
+            <Text style={{ color: "#00F0FF" }}>console.groq.com</Text>
           </Text>
           <TextInput
             value={apiKey}

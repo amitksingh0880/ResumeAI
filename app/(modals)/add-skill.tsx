@@ -53,7 +53,7 @@ export default function AddSkillModal() {
     if (!apiKey) {
       Alert.alert(
         "API Key Required",
-        "Add your Gemini API key in Settings to use AI skill insertion.",
+        "Add your Groq API key in Settings to use AI skill insertion.",
         [
           { text: "Go to Settings", onPress: () => { router.dismiss(); router.push("/(main)/settings"); } },
           { text: "Cancel" },

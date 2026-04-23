@@ -276,8 +276,11 @@ export interface TemplateInfo {
 }
 
 export const TEMPLATES: TemplateInfo[] = [
+  { id: "legacy-style", name: "Legacy Style", description: "Attempts to mimic the look of your original uploaded resume using AI-detected styling.", style: "Original", accentColor: "#8B5CF6", render: renderJakesCV }, // Default to jakes if no customCSS
   { id: "jakes-cv", name: "Jake's CV", description: "Clean, ATS-friendly, single-column. Most popular for CS/tech roles.", style: "Classic", accentColor: "#000000", render: renderJakesCV },
   { id: "awesome-cv", name: "Awesome CV", description: "Bold colored header, modern sans-serif. Great for any industry.", style: "Modern", accentColor: "#00ADB5", render: (ast) => renderAwesomeCV(ast, "#00ADB5") },
+  { id: "modern-pro", name: "Modern Pro", description: "Sleek, professional look with subtle accents. Perfect for senior roles.", style: "Modern", accentColor: "#2563EB", render: (ast) => renderAwesomeCV(ast, "#2563EB") },
+  { id: "minimalist", name: "Minimalist", description: "Ultra-clean design that focuses entirely on content. Zero distractions.", style: "Classic", accentColor: "#444444", render: renderJakesCV },
   { id: "altacv", name: "AltaCV", description: "Sidebar layout with skill bars. Perfect for visual impact.", style: "Sidebar", accentColor: "#4A90D9", render: (ast) => renderAltaCV(ast, "#4A90D9") },
   { id: "deedy", name: "Deedy Resume", description: "Two-column, high-information density. Popular for FAANG applications.", style: "Two-Column", accentColor: "#1a1a1a", render: renderDeedyResume },
 ];
@@ -286,6 +289,11 @@ export function getTemplate(id: string): TemplateInfo {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
 }
 
-export function renderTemplate(id: string, ast: ResumeAST): string {
+export function renderTemplate(id: string, ast: ResumeAST, customCSS?: string): string {
+  if (id === "legacy-style" && customCSS) {
+    // Return a custom renderer that injects the CSS
+    const base = renderJakesCV(ast); // Use jakes as base structure
+    return base.replace("</style>", `${customCSS}</style>`);
+  }
   return getTemplate(id).render(ast);
 }

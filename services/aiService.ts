@@ -1,4 +1,49 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Centralized REST API call to Groq (OpenAI compatible)
+async function callAI(passedApiKey: string, prompt: string) {
+  const url = process.env.EXPO_PUBLIC_GROQ_API_URL || "https://api.groq.com/openai/v1/chat/completions";
+  const model = process.env.EXPO_PUBLIC_GROQ_MODEL_NAME || "llama-3.1-8b-instant";
+  
+  // Use env key if available, otherwise use the one passed from settings
+  const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY || passedApiKey;
+
+  if (!apiKey) {
+    throw new Error("No Groq API Key found. Please add it to your .env or Settings.");
+  }
+  
+  console.log(`AI: Calling Groq with model ${model}...`);
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const msg = errorData.error?.message || `HTTP error! status: ${response.status}`;
+    console.error("Groq API Error Detail:", errorData);
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  if (!data.choices || data.choices.length === 0) {
+    throw new Error("No completion returned from Groq API");
+  }
+  return data.choices[0].message.content;
+}
 
 export interface SkillInsertionResult {
   updatedSource: string;
@@ -28,10 +73,6 @@ export interface AIBulletSuggestion {
   reason: string;
 }
 
-function createClient(apiKey: string) {
-  return new GoogleGenerativeAI(apiKey);
-}
-
 // ─── Skill Insertion ─────────────────────────────────────────────────────────
 
 export async function insertSkillIntoResume(
@@ -40,9 +81,6 @@ export async function insertSkillIntoResume(
   skill: string,
   userRole: string
 ): Promise<SkillInsertionResult> {
-  const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
-
   const prompt = `You are a professional resume writer and LaTeX expert. You are working with a custom resume DSL (domain-specific language) that uses LaTeX-like syntax.
 
 The DSL commands are:
@@ -81,23 +119,26 @@ RESPOND WITH VALID JSON ONLY (no markdown code blocks):
   "confidence": 0.95
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  try {
+    const text = await callAI(apiKey, prompt);
+    // Parse JSON response (strip any accidental markdown)
+    const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    const parsed = JSON.parse(jsonStr);
 
-  // Parse JSON response (strip any accidental markdown)
-  const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  const parsed = JSON.parse(jsonStr);
+    // Compute diff
+    const diff = computeDiff(currentSource, parsed.updatedSource);
 
-  // Compute diff
-  const diff = computeDiff(currentSource, parsed.updatedSource);
-
-  return {
-    updatedSource: parsed.updatedSource,
-    diff,
-    explanation: parsed.explanation,
-    confidence: parsed.confidence ?? 0.9,
-    placement: parsed.placement,
-  };
+    return {
+      updatedSource: parsed.updatedSource,
+      diff,
+      explanation: parsed.explanation,
+      confidence: parsed.confidence ?? 0.9,
+      placement: parsed.placement,
+    };
+  } catch (error: any) {
+    console.error("AI Skill Insertion Error:", error);
+    throw error;
+  }
 }
 
 // ─── Job Match Scorer ────────────────────────────────────────────────────────
@@ -107,9 +148,6 @@ export async function scoreJobMatch(
   resumeSource: string,
   jobDescription: string
 ): Promise<JobMatchResult> {
-  const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
-
   const prompt = `You are an expert ATS (Applicant Tracking System) and career coach.
 
 RESUME (DSL format):
@@ -136,10 +174,14 @@ RESPOND WITH VALID JSON ONLY:
   "summary": "Your resume is a strong match for the backend requirements but lacks cloud-native experience."
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  return JSON.parse(jsonStr);
+  try {
+    const text = await callAI(apiKey, prompt);
+    const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    console.error("AI Job Match Error:", error);
+    throw error;
+  }
 }
 
 // ─── Bullet Strengthener ─────────────────────────────────────────────────────
@@ -148,9 +190,6 @@ export async function strengthenBullets(
   apiKey: string,
   resumeSource: string
 ): Promise<AIBulletSuggestion[]> {
-  const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
-
   const prompt = `You are a professional resume writer. Review these resume bullet points and suggest stronger, more impactful versions that use action verbs and quantifiable results.
 
 RESUME:
@@ -167,21 +206,20 @@ RESPOND WITH VALID JSON ONLY (array):
   }
 ]`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  return JSON.parse(jsonStr);
+  try {
+    const text = await callAI(apiKey, prompt);
+    const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    console.error("AI Bullet Strengthener Error:", error);
+    throw error;
+  }
 }
-
-// ─── Convert Plain Text to DSL ───────────────────────────────────────────────
 
 export async function convertTextToDSL(
   apiKey: string,
   plainText: string
 ): Promise<string> {
-  const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
-
   const prompt = `You are a resume parser. Convert this plain text resume into our custom DSL format.
 
 DSL COMMANDS:
@@ -202,8 +240,19 @@ ${plainText}
 
 Return ONLY the DSL source code, no explanation.`;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  try {
+    console.log("AI: Attempting conversion via Groq REST API");
+    const text = await callAI(apiKey, prompt);
+    // Clean up markdown blocks
+    const cleaned = text
+      .replace(/^```[a-zA-Z]*\n?/, "")
+      .replace(/\n?```$/, "")
+      .trim();
+    return cleaned;
+  } catch (error: any) {
+    console.error("AI Conversion Error:", error);
+    throw error;
+  }
 }
 
 // ─── Diff Engine (Myers Algorithm) ──────────────────────────────────────────
@@ -247,9 +296,6 @@ export async function magicRewrite(
   bulletText: string,
   userRole: string
 ): Promise<{ improved: string; explanation: string }> {
-  const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
-
   const prompt = `You are a world-class executive resume writer. 
   
   Original Bullet: "${bulletText}"
@@ -267,10 +313,14 @@ export async function magicRewrite(
     "explanation": "Why this version is better"
   }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  return JSON.parse(jsonStr);
+  try {
+    const text = await callAI(apiKey, prompt);
+    const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    console.error("AI Magic Rewrite Error:", error);
+    throw error;
+  }
 }
 
 // ─── Career Roadmap ─────────────────────────────────────────────────────────
@@ -286,9 +336,6 @@ export async function generateCareerRoadmap(
   currentSkills: string[],
   currentRole: string
 ): Promise<{ steps: CareerStep[]; summary: string }> {
-  const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
-
   const prompt = `You are a career strategist. Based on these skills and role, generate a 3-step growth roadmap.
 
   Current Role: ${currentRole}
@@ -302,10 +349,14 @@ export async function generateCareerRoadmap(
     "summary": "Overall growth outlook"
   }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  return JSON.parse(jsonStr);
+  try {
+    const text = await callAI(apiKey, prompt);
+    const jsonStr = text.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error: any) {
+    console.error("AI Roadmap Error:", error);
+    throw error;
+  }
 }
 
 function computeLCS(a: string[], b: string[]): string[] {
@@ -324,4 +375,45 @@ function computeLCS(a: string[], b: string[]): string[] {
     else j--;
   }
   return lcs;
+}
+
+/**
+ * Converts raw text to DSL and also attempts to extract a matching CSS style.
+ */
+export async function convertResumeWithStyle(apiKey: string, rawText: string): Promise<{ dsl: string, css: string }> {
+  const prompt = `
+    You are an expert resume architect. I will give you a raw text resume.
+    1. Convert the content into our Resume DSL format (the LaTeX-like structure with \\name, \\role, \\contact, \\summary, and \\section).
+    2. Analyze the likely layout of the original resume from the text (e.g. is it centered? two-column? minimalist?).
+    3. Generate a CSS block that would make an HTML version of this DSL look like the original.
+       Use these classes in your CSS: .header, .section-title, .job-header, .job-title, .job-company, .job-date, .skill-row, .skill-cat.
+
+    RESPONSE FORMAT:
+    [DSL]
+    (DSL content here)
+    [/DSL]
+    [CSS]
+    (CSS content here)
+    [/CSS]
+
+    RESUME TEXT:
+    ${rawText}
+  `;
+
+  try {
+    const text = await callAI(apiKey, prompt);
+    const dslMatch = text.match(/\[DSL\]([\s\S]*?)\[\/DSL\]/);
+    const cssMatch = text.match(/\[CSS\]([\s\S]*?)\[\/CSS\]/);
+
+    const dsl = dslMatch ? dslMatch[1].trim() : text;
+    const css = cssMatch ? cssMatch[1].trim() : "";
+
+    return { 
+      dsl: dsl.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim(), 
+      css: css.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim()
+    };
+  } catch (error: any) {
+    console.error("AI Stylized Conversion Error:", error);
+    throw error;
+  }
 }

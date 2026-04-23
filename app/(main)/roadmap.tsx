@@ -29,7 +29,7 @@ export default function RoadmapScreen() {
   async function handleGenerate() {
     const apiKey = await getApiKey();
     if (!apiKey) {
-      Alert.alert("API Key Required", "Add your Gemini API key in Settings.");
+      Alert.alert("API Key Required", "Add your Groq API key in Settings.");
       router.back();
       return;
     }

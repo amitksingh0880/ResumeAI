@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useEffect, useState, useCallback } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 import {
+  getAllDocuments,
   getActiveDocumentId,
   getDocumentById,
+  setActiveDocumentId,
   type ResumeDocument,
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
@@ -24,31 +26,50 @@ import {
 
 export default function DashboardScreen() {
   const [doc, setDoc] = useState<ResumeDocument | null>(null);
+  const [allDocs, setAllDocs] = useState<ResumeDocument[]>([]);
   const [skillCount, setSkillCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   async function loadData() {
+    setLoading(true);
+    const docs = await getAllDocuments();
+    setAllDocs(docs);
+
     const id = await getActiveDocumentId();
-    if (!id) return;
-    const d = await getDocumentById(id);
-    if (d) {
+    if (!id && docs.length > 0) {
+      // Auto-activate the first one if none active
+      await setActiveDocumentId(docs[0].id);
+      setDoc(docs[0]);
+    } else if (id) {
+      const d = docs.find(doc => doc.id === id) || null;
       setDoc(d);
-      try {
-        const ast = parseResumeDSL(d.currentSource);
-        const count = ast.sections.reduce(
-          (acc, s) =>
-            acc +
-            s.items
-              .filter((i) => i.type === "skillgroup")
-              .reduce((a, sg: any) => a + sg.items.length, 0),
-          0
-        );
-        setSkillCount(count);
-      } catch {}
+      if (d) {
+        try {
+          const ast = parseResumeDSL(d.currentSource);
+          const count = ast.sections.reduce(
+            (acc, s) =>
+              acc +
+              s.items
+                .filter((i) => i.type === "skillgroup")
+                .reduce((a, sg: any) => a + sg.items.length, 0),
+            0
+          );
+          setSkillCount(count);
+        } catch {}
+      }
     }
+    setLoading(false);
+  }
+
+  async function handleSwitch(id: string) {
+    await setActiveDocumentId(id);
+    loadData();
   }
 
   const score = skillCount > 0 ? Math.min(60 + skillCount * 2, 99) : 85;
@@ -175,6 +196,29 @@ export default function DashboardScreen() {
             <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "800", letterSpacing: 1 }}>NEW RESUME</Text>
           </TouchableOpacity>
         </View>
+
+        {/* ── All Resumes ── */}
+        {allDocs.length > 1 && (
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>ALL REPOSITORIES</Text>
+            {allDocs.map((d) => (
+              <TouchableOpacity
+                key={d.id}
+                onPress={() => handleSwitch(d.id)}
+                style={{
+                  backgroundColor: doc?.id === d.id ? "rgba(0,240,255,0.05)" : "#121212",
+                  borderRadius: 8, borderWidth: 1,
+                  borderColor: doc?.id === d.id ? "#00F0FF" : "#1F1F1F",
+                  padding: 12, marginBottom: 8, flexDirection: "row", alignItems: "center"
+                }}
+              >
+                <LucideFileText color={doc?.id === d.id ? "#00F0FF" : "#444"} size={16} />
+                <Text style={{ color: doc?.id === d.id ? "#FFFFFF" : "#8E8E93", fontSize: 12, fontWeight: "700", marginLeft: 12, flex: 1 }}>{d.title}</Text>
+                {doc?.id === d.id && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#00F0FF" }} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* ── Neural Activity ── */}
         <View style={{ marginBottom: 24 }}>
