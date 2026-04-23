@@ -80,19 +80,24 @@ export async function insertSkillIntoResume(
   apiKey: string,
   currentSource: string,
   skill: string,
-  userRole: string
+  userRole: string,
+  description?: string,
+  link?: string
 ): Promise<SkillInsertionResult> {
   const prompt = `You are a professional resume writer and LaTeX expert.
 TASK: Insert the following NEW SKILL into the resume DSL source provided below.
 
 NEW SKILL TO ADD: "${skill}"
+${description ? `ADDITIONAL CONTEXT/DETAILS: "${description}"` : ""}
+${link ? `ASSOCIATED URL/LINK: "${link}"` : ""}
 USER'S CURRENT ROLE: ${userRole || "Software Engineer"}
 
 INSTRUCTIONS:
 1. Identify the best location (existing \\skillgroup, new \\skillgroup, or as a \\bullet in experience).
 2. Do NOT duplicate existing skills.
 3. Maintain the custom DSL syntax (\\name, \\role, \\job, \\bullet, \\skillgroup, etc.).
-4. Return the COMPLETE modified source.
+4. USE THE \\link{url}{label} COMMAND for any URLs provided. For example: \\link{${link || "url"}}{Source Code}.
+5. Return the COMPLETE modified source.
 
 CURRENT RESUME SOURCE:
 \`\`\`
@@ -434,5 +439,42 @@ export async function convertResumeWithStyle(apiKey: string, rawText: string): P
   } catch (error: any) {
     console.error("AI Stylized Conversion Error:", error);
     throw error;
+  }
+}
+export async function fixAllLinks(
+  apiKey: string,
+  source: string
+): Promise<string> {
+  const prompt = `You are a professional resume editor. 
+  TASK: Scan the provided Resume DSL and convert all PLAIN TEXT URLs or "Link" labels into the structured \\link{url}{label} command.
+  
+  EXAMPLES:
+  - "github.com/user" -> "\\link{https://github.com/user}{GitHub}"
+  - "Project Link: http://demo.com" -> "Project: \\link{http://demo.com}{Live Demo}"
+  - "Check out my code at bit.ly/123" -> "Code: \\link{https://bit.ly/123}{Source}"
+  
+  INSTRUCTIONS:
+  1. Identify URLs for GitHub, LinkedIn, Personal Websites, and Projects.
+  2. Use \\link{url}{Label} where Label is descriptive (GitHub, Demo, Website, etc.).
+  3. Return the COMPLETE modified DSL source.
+  4. Ensure all URLs start with http:// or https://.
+  
+  RESUME SOURCE:
+  \`\`\`
+  ${source}
+  \`\`\`
+  
+  RETURN ONLY THE MODIFIED [SOURCE] TAGGED CONTENT.
+  [SOURCE]
+  ...
+  `;
+
+  try {
+    const res = await callAI(apiKey, prompt);
+    const match = res.match(/\[SOURCE\]\s*([\s\S]*?)(?:\[\/SOURCE\]|$)/i);
+    return match ? match[1].trim() : source;
+  } catch (error) {
+    console.error("Fix All Links Error:", error);
+    return source;
   }
 }

@@ -8,6 +8,53 @@ const BASE_CSS = `
   a { text-decoration: none; color: inherit; }
 `;
 
+function formatText(str: string): string {
+  return str
+    .replace(/🔗/g, "")
+    .replace(/\\link{([^}]+)}{([^}]+)}/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: rgba(0,0,0,0.2); font-weight: 500;">$2</a>')
+    .replace(/\\textbf{([^}]+)}/g, "<strong>$1</strong>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function renderContact(ast: ResumeAST, separator = " | "): string {
+  // Extract structured contact info from unstructured multiline string
+  const rawContact = ast.contact.raw.join("  ");
+  
+  const phoneMatch = rawContact.match(/Phone:\s*(\+?[\d\s\-().]+)/i);
+  const emailMatch = rawContact.match(/Email:\s*([^\s]+@[^\s]+)/i);
+  const linkMatch = rawContact.match(/LinkedIn:\s*([^\s]+)/i);
+  const gitMatch = rawContact.match(/GitHub:\s*([^\s]+)/i);
+  const addrMatch = rawContact.match(/Address:\s*(.*?)(?=\s*(Phone|Email|LinkedIn|GitHub|Website):|$)/i);
+
+  const contactItems: string[] = [];
+  const address = addrMatch ? addrMatch[1].trim() : (ast.contact.location || "");
+  
+  if (phoneMatch) {
+    const p = phoneMatch[1].trim();
+    contactItems.push(`<span><a href="tel:${p}">${p}</a></span>`);
+  }
+  if (emailMatch) {
+    const e = emailMatch[1].trim();
+    contactItems.push(`<span><a href="mailto:${e}">${e}</a></span>`);
+  }
+  if (linkMatch) {
+    const l = linkMatch[1].trim();
+    const url = l.startsWith("http") ? l : `https://${l}`;
+    contactItems.push(`<span><a href="${url}" target="_blank">${l}</a></span>`);
+  }
+  if (gitMatch) {
+    const g = gitMatch[1].trim();
+    const url = g.startsWith("http") ? g : `https://${g}`;
+    contactItems.push(`<span><a href="${url}" target="_blank">${g}</a></span>`);
+  }
+
+  if (contactItems.length === 0 && ast.contact.raw.length > 0) {
+    return ast.contact.raw.map(c => `<span>${formatText(c)}</span>`).join(separator);
+  }
+  
+  return contactItems.join(separator);
+}
+
 // ─── 1. Jake's CV ────────────────────────────────────────────────────────────
 
 export function renderJakesCV(ast: ResumeAST): string {
@@ -35,21 +82,21 @@ export function renderJakesCV(ast: ResumeAST): string {
     const items = sec.items.map((item) => {
       if (item.type === "job") {
         const j = item as ResumeJob;
-        return `<div class="job-header"><span><span class="job-title">${j.title}</span> — <span class="job-company">${j.company}</span></span><span class="job-date">${j.date}</span></div><ul>${j.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>`;
+        return `<div class="job-header"><span><span class="job-title">${formatText(j.title)}</span> — <span class="job-company">${formatText(j.company)}</span></span><span class="job-date">${j.date}</span></div><ul>${j.bullets.map((b) => `<li>${formatText(b)}</li>`).join("")}</ul>`;
       }
       if (item.type === "skillgroup") {
         const s = item as ResumeSkillGroup;
-        return `<div class="skill-row"><span class="skill-cat">${s.category}:</span><span>${s.items.join(", ")}</span></div>`;
+        return `<div class="skill-row"><span class="skill-cat">${formatText(s.category)}:</span><span>${formatText(s.items.join(", "))}</span></div>`;
       }
       if (item.type === "degree") {
         const d = item as ResumeDegree;
-        return `<div class="edu-row"><span><b>${d.name}</b>, ${d.school}</span><span>${d.year}</span></div>`;
+        return `<div class="edu-row"><span><b>${formatText(d.name)}</b>, ${formatText(d.school)}</span><span>${d.year}</span></div>`;
       }
       if (item.type === "cert") {
         const c = item as ResumeCert;
-        return `<div class="cert-row"><span><b>${c.name}</b> — ${c.issuer}</span><span>${c.year}</span></div>`;
+        return `<div class="cert-row"><span><b>${formatText(c.name)}</b> — ${formatText(c.issuer)}</span><span>${c.year}</span></div>`;
       }
-      if (item.type === "bullet") return `<ul><li>${item.text}</li></ul>`;
+      if (item.type === "bullet") return `<ul><li>${formatText(item.text)}</li></ul>`;
       return "";
     }).join("");
     return `<div class="section-title">${sec.title}</div>${items}`;
@@ -58,9 +105,9 @@ export function renderJakesCV(ast: ResumeAST): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${BASE_CSS}${css}</style></head><body>
     <div class="header">
       <h1>${ast.name}</h1>
-      <div class="contact">${ast.contact.raw.map((c) => `<span>${c}</span>`).join("<span>|</span>")}</div>
+      <div class="contact">${renderContact(ast, "<span>|</span>")}</div>
     </div>
-    ${ast.summary ? `<div class="summary">${ast.summary}</div>` : ""}
+    ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
     ${sections}
   </body></html>`;
 }
@@ -93,21 +140,21 @@ export function renderAwesomeCV(ast: ResumeAST, accentColor = "#00ADB5"): string
     const items = sec.items.map((item) => {
       if (item.type === "job") {
         const j = item as ResumeJob;
-        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${j.title}</div><div class="entry-sub">${j.company}</div></div><div class="entry-date">${j.date}</div></div><ul>${j.bullets.map((b) => `<li>${b}</li>`).join("")}</ul></div>`;
+        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${formatText(j.title)}</div><div class="entry-sub">${formatText(j.company)}</div></div><div class="entry-date">${j.date}</div></div><ul>${j.bullets.map((b) => `<li>${formatText(b)}</li>`).join("")}</ul></div>`;
       }
       if (item.type === "skillgroup") {
         const s = item as ResumeSkillGroup;
-        return `<div class="skill-row"><span class="skill-cat">${s.category}</span><span>${s.items.join(" · ")}</span></div>`;
+        return `<div class="skill-row"><span class="skill-cat">${formatText(s.category)}</span><span>${formatText(s.items.join(" · "))}</span></div>`;
       }
       if (item.type === "degree") {
         const d = item as ResumeDegree;
-        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${d.name}</div><div class="entry-sub">${d.school}</div></div><div class="entry-date">${d.year}</div></div></div>`;
+        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${formatText(d.name)}</div><div class="entry-sub">${formatText(d.school)}</div></div><div class="entry-date">${d.year}</div></div></div>`;
       }
       if (item.type === "cert") {
         const c = item as ResumeCert;
-        return `<div class="entry"><div class="entry-header"><div class="entry-title">${c.name}</div><div class="entry-date">${c.year}</div></div><div class="entry-sub">${c.issuer}</div></div>`;
+        return `<div class="entry"><div class="entry-header"><div class="entry-title">${formatText(c.name)}</div><div class="entry-date">${c.year}</div></div><div class="entry-sub">${formatText(c.issuer)}</div></div>`;
       }
-      if (item.type === "bullet") return `<ul><li>${item.text}</li></ul>`;
+      if (item.type === "bullet") return `<ul><li>${formatText(item.text)}</li></ul>`;
       return "";
     }).join("");
     return `<div class="section-title">${sec.title}</div>${items}`;
@@ -117,10 +164,10 @@ export function renderAwesomeCV(ast: ResumeAST, accentColor = "#00ADB5"): string
     <div class="header">
       <h1>${ast.name}</h1>
       <div class="role">${ast.role}</div>
-      <div class="contact">${ast.contact.raw.join("  ·  ")}</div>
+      <div class="contact">${renderContact(ast, "  ·  ")}</div>
     </div>
     <div class="body">
-      ${ast.summary ? `<div class="summary">${ast.summary}</div>` : ""}
+      ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
       ${sections}
     </div>
   </body></html>`;
@@ -160,7 +207,7 @@ export function renderAltaCV(ast: ResumeAST, accentColor = "#4A90D9"): string {
   const sidebarSkills = allSkillGroups.map((sg) =>
     sg.items.slice(0, 3).map((skill, idx) => `
       <div class="skill-bar-row">
-        <div class="skill-name">${skill}</div>
+        <div class="skill-name">${formatText(skill)}</div>
         <div class="skill-bar-bg"><div class="skill-bar-fill" style="width:${80 + idx * 5}%"></div></div>
       </div>`).join("")
   ).join("");
@@ -169,16 +216,16 @@ export function renderAltaCV(ast: ResumeAST, accentColor = "#4A90D9"): string {
     const items = sec.items.map((item) => {
       if (item.type === "job") {
         const j = item as ResumeJob;
-        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${j.title}</div><div class="entry-sub">${j.company}</div></div><div class="entry-date">${j.date}</div></div><ul>${j.bullets.map((b) => `<li>${b}</li>`).join("")}</ul></div>`;
+        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${formatText(j.title)}</div><div class="entry-sub">${formatText(j.company)}</div></div><div class="entry-date">${j.date}</div></div><ul>${j.bullets.map((b) => `<li>${formatText(b)}</li>`).join("")}</ul></div>`;
       }
       if (item.type === "skillgroup") return ""; // shown in sidebar
       if (item.type === "degree") {
         const d = item as ResumeDegree;
-        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${d.name}</div><div class="entry-sub">${d.school}</div></div><div class="entry-date">${d.year}</div></div></div>`;
+        return `<div class="entry"><div class="entry-header"><div><div class="entry-title">${formatText(d.name)}</div><div class="entry-sub">${formatText(d.school)}</div></div><div class="entry-date">${d.year}</div></div></div>`;
       }
       if (item.type === "cert") {
         const c = item as ResumeCert;
-        return `<div class="entry"><div class="entry-header"><div class="entry-title">${c.name}</div><div class="entry-date">${c.year}</div></div><div class="entry-sub">${c.issuer}</div></div>`;
+        return `<div class="entry"><div class="entry-header"><div class="entry-title">${formatText(c.name)}</div><div class="entry-date">${c.year}</div></div><div class="entry-sub">${formatText(c.issuer)}</div></div>`;
       }
       return "";
     }).filter(Boolean).join("");
@@ -191,11 +238,11 @@ export function renderAltaCV(ast: ResumeAST, accentColor = "#4A90D9"): string {
       <h1>${ast.name}</h1>
       <div class="role">${ast.role}</div>
       <div class="sidebar-section">Contact</div>
-      ${ast.contact.raw.map((c) => `<div class="contact-item">${c}</div>`).join("")}
+      ${renderContact(ast, "<br/>")}
       ${sidebarSkills ? `<div class="sidebar-section">Skills</div>${sidebarSkills}` : ""}
     </div>
     <div class="main">
-      ${ast.summary ? `<div class="summary">${ast.summary}</div>` : ""}
+      ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
       ${mainSections}
     </div>
   </body></html>`;
@@ -233,19 +280,19 @@ export function renderDeedyResume(ast: ResumeAST): string {
     const items = sec.items.map((item) => {
       if (item.type === "job") {
         const j = item as ResumeJob;
-        return `<div class="entry"><div class="entry-title">${j.title}</div><div class="entry-sub">${j.company}</div><div class="entry-date">${j.date}</div><ul>${j.bullets.map((b) => `<li>${b}</li>`).join("")}</ul></div>`;
+        return `<div class="entry"><div class="entry-title">${formatText(j.title)}</div><div class="entry-sub">${formatText(j.company)}</div><div class="entry-date">${j.date}</div><ul>${j.bullets.map((b) => `<li>${formatText(b)}</li>`).join("")}</ul></div>`;
       }
       if (item.type === "skillgroup") {
         const s = item as ResumeSkillGroup;
-        return `<div class="entry"><div class="entry-title">${s.category}</div>${s.items.map((i) => `<div class="skill-item">${i}</div>`).join("")}</div>`;
+        return `<div class="entry"><div class="entry-title">${formatText(s.category)}</div>${s.items.map((i) => `<div class="skill-item">${formatText(i)}</div>`).join("")}</div>`;
       }
       if (item.type === "degree") {
         const d = item as ResumeDegree;
-        return `<div class="entry"><div class="entry-title">${d.name}</div><div class="entry-sub">${d.school}</div><div class="entry-date">${d.year}</div></div>`;
+        return `<div class="entry"><div class="entry-title">${formatText(d.name)}</div><div class="entry-sub">${formatText(d.school)}</div><div class="entry-date">${d.year}</div></div>`;
       }
       if (item.type === "cert") {
         const c = item as ResumeCert;
-        return `<div class="entry"><div class="entry-title">${c.name}</div><div class="entry-sub">${c.issuer} · ${c.year}</div></div>`;
+        return `<div class="entry"><div class="entry-title">${formatText(c.name)}</div><div class="entry-sub">${formatText(c.issuer)} · ${c.year}</div></div>`;
       }
       return "";
     }).join("");
@@ -255,7 +302,7 @@ export function renderDeedyResume(ast: ResumeAST): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${BASE_CSS}${css}</style></head><body>
     <div class="header">
       <h1>${ast.name}</h1>
-      <div class="contact">${ast.contact.raw.join("  ·  ")}</div>
+      <div class="contact">${renderContact(ast, "  ·  ")}</div>
     </div>
     <div class="cols">
       <div class="left-col">${leftSections.map(renderSection).join("")}</div>
@@ -290,21 +337,21 @@ export function renderClassicPDF(ast: ResumeAST): string {
     const items = sec.items.map((item) => {
       if (item.type === "job") {
         const j = item as ResumeJob;
-        return `<div class="entry"><div class="entry-header"><span class="entry-title">${j.title}</span><span class="entry-date">${j.date}</span></div>${j.company ? `<div class="entry-sub">${j.company}</div>` : ""}<ul>${j.bullets.map((b) => `<li>${b}</li>`).join("")}</ul></div>`;
+        return `<div class="entry"><div class="entry-header"><span class="entry-title">${formatText(j.title)}</span><span class="entry-date">${j.date}</span></div>${j.company ? `<div class="entry-sub">${formatText(j.company)}</div>` : ""}<ul>${j.bullets.map((b) => `<li>${formatText(b)}</li>`).join("")}</ul></div>`;
       }
       if (item.type === "skillgroup") {
         const s = item as ResumeSkillGroup;
-        return `<div class="skill-line"><span class="skill-cat">${s.category}: </span>${s.items.join(", ")}</div>`;
+        return `<div class="skill-line"><span class="skill-cat">${formatText(s.category)}: </span>${formatText(s.items.join(", "))}</div>`;
       }
       if (item.type === "degree") {
         const d = item as ResumeDegree;
-        return `<div class="entry"><div class="entry-header"><span class="entry-title">${d.name}</span><span class="entry-date">${d.year}</span></div><div class="entry-sub">${d.school}</div></div>`;
+        return `<div class="entry"><div class="entry-header"><span class="entry-title">${formatText(d.name)}</span><span class="entry-date">${d.year}</span></div><div class="entry-sub">${formatText(d.school)}</div></div>`;
       }
       if (item.type === "cert") {
         const c = item as ResumeCert;
-        return `<div class="entry"><div class="entry-header"><span class="entry-title">${c.name}</span><span class="entry-date">${c.year}</span></div><div class="entry-sub">${c.issuer}</div></div>`;
+        return `<div class="entry"><div class="entry-header"><span class="entry-title">${formatText(c.name)}</span><span class="entry-date">${c.year}</span></div><div class="entry-sub">${formatText(c.issuer)}</div></div>`;
       }
-      if (item.type === "bullet") return `<ul><li>${item.text}</li></ul>`;
+      if (item.type === "bullet") return `<ul><li>${formatText(item.text)}</li></ul>`;
       return "";
     }).join("");
     return `<div class="section-title">${sec.title}</div>${items}`;
@@ -316,9 +363,9 @@ export function renderClassicPDF(ast: ResumeAST): string {
     <div class="header">
       <h1>${ast.name}</h1>
       <div class="role">${ast.role}</div>
-      <div class="contact">${ast.contact.raw.join(" | ")}</div>
+      <div class="contact">${renderContact(ast, " | ")}</div>
     </div>
-    ${ast.summary ? `<div class="summary">${ast.summary}</div>` : ""}
+    ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
     ${sections}
   </body></html>`;
 }
@@ -358,12 +405,6 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
     b, strong { font-weight: 700; color: #000; }
   `;
 
-  const formatText = (str: string) => {
-    return str
-      .replace(/\\textbf{([^}]+)}/g, "<strong>$1</strong>")
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  };
-
   const sections = ast.sections.map((sec) => {
     const isSkills = sec.title.toLowerCase().includes("skills");
     
@@ -389,7 +430,7 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
                date = b;
              } else if ((b.toLowerCase().includes("sgpa") || b.toLowerCase().includes("per:")) && !extra) {
                extra = b;
-             } else if ((b.includes("React") || b.includes("Java,") || b.includes("Link")) && !extra) {
+             } else if ((b.includes("React") || b.includes("Java,")) && !extra) {
                extra = b;
              } else if (b.length < 80 && !b.match(/^[A-Z][a-z]+ed /) && !company) {
                company = b;
@@ -459,28 +500,8 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
     `;
   }).join("");
 
-  // Extract structured contact info from unstructured multiline string
-  let rawContact = ast.contact.raw.join("  ");
-  let address = "Ghaziabad, India"; 
-  
-  const addrMatch = rawContact.match(/Address:\s*(.*?)(?=\s*(Phone|Email|LinkedIn|GitHub|Website):|$)/i);
-  if (addrMatch) address = addrMatch[1].trim();
-
-  const phoneMatch = rawContact.match(/Phone:\s*(.*?)(?=\s*(Address|Email|LinkedIn|GitHub|Website):|$)/i);
-  const emailMatch = rawContact.match(/Email:\s*(.*?)(?=\s*(Address|Phone|LinkedIn|GitHub|Website):|$)/i);
-  const linkMatch = rawContact.match(/LinkedIn:\s*(.*?)(?=\s*(Address|Phone|Email|GitHub|Website):|$)/i);
-  const gitMatch = rawContact.match(/GitHub:\s*(.*?)(?=\s*(Address|Phone|Email|LinkedIn|Website):|$)/i);
-
-  const contactItems = [];
-  if (phoneMatch) contactItems.push(`<span>✆ ${phoneMatch[1].trim()}</span>`);
-  if (emailMatch) contactItems.push(`<span>✉ ${emailMatch[1].trim()}</span>`);
-  if (linkMatch) contactItems.push(`<span>in ${linkMatch[1].trim()}</span>`);
-  if (gitMatch) contactItems.push(`<span>git ${gitMatch[1].trim()}</span>`);
-
-  let contactHtml = contactItems.join(" | ");
-  if (contactItems.length === 0 && ast.contact.raw.length > 0) {
-      contactHtml = ast.contact.raw.map(c => `<span>${c}</span>`).join(" | ");
-  }
+  const contactHtml = renderContact(ast, " | ");
+  const address = ast.contact.location || "";
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
     <style>${BASE_CSS}${css}</style></head><body>
@@ -491,7 +512,7 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
         ${contactHtml}
       </div>
     </div>
-    ${ast.summary ? `<div class="summary">${ast.summary}</div>` : ""}
+    ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
     ${sections}
   </body></html>`;
 }

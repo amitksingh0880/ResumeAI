@@ -29,6 +29,8 @@ import {
   type ResumeDocument,
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
+import { renderTemplate } from "@/services/templateRenderer";
+import { exportToPDF } from "@/services/exportService";
 
 export default function EditorScreen() {
   const [source, setSource] = useState("");
@@ -36,6 +38,7 @@ export default function EditorScreen() {
   const [doc, setDoc] = useState<ResumeDocument | null>(null);
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadDoc();
@@ -63,6 +66,20 @@ export default function EditorScreen() {
       Alert.alert("Error", "Failed to save: " + e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExport() {
+    if (!source.trim()) return;
+    setExporting(true);
+    try {
+      const ast = parseResumeDSL(source);
+      const html = renderTemplate(doc?.selectedTemplate || "elite-latex", ast);
+      await exportToPDF(html, doc?.title || "Resume");
+    } catch (e: any) {
+      Alert.alert("Export Failed", e.message);
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -118,11 +135,12 @@ export default function EditorScreen() {
             {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <LucideSave color="#FFFFFF" size={20} />}
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={handleExport}
             activeOpacity={0.8}
             style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}
           >
-            <LucideDownload color="#000" size={16} />
-            <Text style={{ color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1, marginLeft: 6 }}>EXPORT</Text>
+            {exporting ? <ActivityIndicator color="#000" size="small" /> : <LucideDownload color="#000" size={16} />}
+            <Text style={{ color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1, marginLeft: 6 }}>{exporting ? "WORKING..." : "EXPORT"}</Text>
           </TouchableOpacity>
         </View>
       </View>

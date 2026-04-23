@@ -31,6 +31,8 @@ const QUICK_SKILLS = [
 export default function AddSkillModal() {
   const [doc, setDoc] = useState<ResumeDocument | null>(null);
   const [skill, setSkill] = useState("");
+  const [description, setDescription] = useState("");
+  const [link, setLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"input" | "result">("input");
   const [result, setResult] = useState<{
@@ -65,7 +67,7 @@ export default function AddSkillModal() {
     setLoading(true);
     try {
       const ast = parseResumeDSL(doc.currentSource);
-      const res = await insertSkillIntoResume(apiKey, doc.currentSource, skill.trim(), ast.role);
+      const res = await insertSkillIntoResume(apiKey, doc.currentSource, skill.trim(), ast.role, description.trim(), link.trim());
       setResult(res);
       setStep("result");
     } catch (e: any) {
@@ -108,7 +110,7 @@ export default function AddSkillModal() {
           <>
             {/* Skill Input */}
             <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 8 }}>SKILL NAME</Text>
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
               <TextInput
                 value={skill}
                 onChangeText={setSkill}
@@ -119,27 +121,67 @@ export default function AddSkillModal() {
                   borderWidth: 1, borderColor: skill ? "#00F0FF" : "#1F1F1F",
                   padding: 14, color: "#FFFFFF", fontSize: 14,
                 }}
-                returnKeyType="done"
-                onSubmitEditing={handleInsert}
+                returnKeyType="next"
                 autoFocus
               />
-              <TouchableOpacity
-                onPress={handleInsert}
-                disabled={loading || !skill.trim()}
-                activeOpacity={0.8}
-                style={{
-                  backgroundColor: skill.trim() ? "#8B5CF6" : "#1A1A1A",
-                  borderRadius: 4, paddingHorizontal: 16,
-                  alignItems: "center", justifyContent: "center",
-                  opacity: !skill.trim() ? 0.5 : 1,
-                }}
-              >
-                {loading
-                  ? <ActivityIndicator color="#FFFFFF" size="small" />
-                  : <LucideZap color="#FFFFFF" size={20} />
-                }
-              </TouchableOpacity>
             </View>
+
+            {/* Context/Description Input */}
+            <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 8 }}>CONTEXT (WHERE TO ADD / WHAT YOU LEARNED)</Text>
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="e.g. Add to my current role, learned to manage clusters..."
+              placeholderTextColor="#333"
+              multiline
+              numberOfLines={3}
+              style={{
+                backgroundColor: "#121212", borderRadius: 4,
+                borderWidth: 1, borderColor: description ? "#8B5CF6" : "#1F1F1F",
+                padding: 14, color: "#FFFFFF", fontSize: 13, minHeight: 80,
+                textAlignVertical: "top", marginBottom: 16,
+              }}
+            />
+
+            {/* Link Input */}
+            <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 8 }}>ASSOCIATED LINK (OPTIONAL)</Text>
+            <TextInput
+              value={link}
+              onChangeText={setLink}
+              placeholder="e.g. https://github.com/user/repo"
+              placeholderTextColor="#333"
+              style={{
+                backgroundColor: "#121212", borderRadius: 4,
+                borderWidth: 1, borderColor: link ? "#00F0FF" : "#1F1F1F",
+                padding: 14, color: "#FFFFFF", fontSize: 13, marginBottom: 24,
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+            />
+
+            {/* Action Button */}
+            <TouchableOpacity
+              onPress={handleInsert}
+              disabled={loading || !skill.trim()}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: skill.trim() ? "#00F0FF" : "#1A1A1A",
+                borderRadius: 4, paddingVertical: 14,
+                alignItems: "center", justifyContent: "center",
+                flexDirection: "row", gap: 8,
+                marginBottom: 32,
+                opacity: !skill.trim() ? 0.5 : 1,
+              }}
+            >
+              {loading
+                ? <ActivityIndicator color="#000" size="small" />
+                : <>
+                    <LucideZap color="#000" size={18} />
+                    <Text style={{ color: "#000", fontWeight: "900", fontSize: 13, letterSpacing: 1 }}>INJECT WITH AI</Text>
+                  </>
+              }
+            </TouchableOpacity>
 
             {/* Quick Add */}
             <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>QUICK ADD</Text>

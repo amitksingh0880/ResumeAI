@@ -20,7 +20,8 @@ import {
   LucideCode2, 
   LucidePalette, 
   LucidePlus,
-  LucideSave
+  LucideSave,
+  LucideDownload
 } from "lucide-react-native";
 import {
   getActiveDocumentId,
@@ -31,6 +32,8 @@ import {
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
 import { renderTemplate } from "@/services/templateRenderer";
+import { fixAllLinks } from "@/services/aiService";
+import { exportToPDF } from "@/services/exportService";
 
 function EditorIframe({
   source,
@@ -182,10 +185,18 @@ export default function EditorScreen() {
     const apiKey = await getApiKey();
     if (!apiKey) { Alert.alert("Key Required", "Add Groq Key."); return; }
     setRewriting(true);
-    setTimeout(() => {
-       setRewriting(false);
-       Alert.alert("Analysis Complete", "AI has optimized your content structure.");
-    }, 2000);
+    try {
+      const fixedSource = await fixAllLinks(apiKey, source);
+      setSource(fixedSource);
+      if (doc) {
+        await updateDocumentSource(doc.id, fixedSource, "AI Link Repair");
+      }
+      Alert.alert("Links Repaired", "All URLs have been converted to interactive links.");
+    } catch (e) {
+      Alert.alert("Error", "Failed to repair links.");
+    } finally {
+      setRewriting(false);
+    }
   };
 
   if (!doc) return null;
@@ -241,13 +252,39 @@ export default function EditorScreen() {
             onPress={() => router.push("/(modals)/add-skill")}
             activeOpacity={0.7}
             style={{ 
-              backgroundColor: "#00F0FF", 
+              backgroundColor: "rgba(0, 240, 255, 0.1)", 
               borderRadius: 4, 
               width: 36, height: 36,
-              alignItems: "center", justifyContent: "center"
+              alignItems: "center", justifyContent: "center",
+              borderWidth: 1,
+              borderColor: "rgba(0, 240, 255, 0.3)",
+              marginRight: 4
             }}
           >
-            <LucidePlus color="#000" size={18} />
+            <LucidePlus color="#00F0FF" size={18} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                await exportToPDF(previewHtml, doc.title);
+              } catch (e) {
+                Alert.alert("Export Failed", "Could not generate PDF.");
+              }
+            }}
+            activeOpacity={0.7}
+            style={{ 
+              backgroundColor: "#00F0FF", 
+              borderRadius: 4, 
+              paddingHorizontal: 10,
+              height: 36,
+              flexDirection: "row",
+              alignItems: "center", justifyContent: "center",
+              gap: 6
+            }}
+          >
+            <LucideDownload color="#000" size={16} />
+            <Text style={{ color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 0.5 }}>EXPORT</Text>
           </TouchableOpacity>
         </View>
       </View>
