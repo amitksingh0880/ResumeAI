@@ -8,21 +8,24 @@ import {
   setOnboardingDone,
   getImportDraft,
   getImportDraftCSS,
+  getImportDraftFilename,
 } from "@/services/storageService";
 import { LucideChevronLeft, LucideLayout, LucideCheckCircle2 } from "lucide-react-native";
 
 export default function TemplatePickerScreen() {
   const [source, setSource] = useState("");
   const [customCSS, setCustomCSS] = useState("");
+  const [filename, setFilename] = useState("");
   const [selected, setSelected] = useState("jakes-cv");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    Promise.all([getImportDraft(), getImportDraftCSS()]).then(([s, css]) => {
+    Promise.all([getImportDraft(), getImportDraftCSS(), getImportDraftFilename()]).then(([s, css, fname]) => {
       setSource(s || "");
       setCustomCSS(css || "");
-      if (css) setSelected("legacy-style"); // Auto-select if we have a style
+      setFilename(fname || "");
+      if (css) setSelected("legacy-style");
       setLoading(false);
     });
   }, []);
@@ -30,7 +33,19 @@ export default function TemplatePickerScreen() {
   async function handleCreate() {
     if (!source) return;
     setCreating(true);
-    const doc = await createDocument("My Resume", source, selected, customCSS);
+    
+    let title = filename ? filename.replace(/\.[^/.]+$/, "") : "My Resume";
+    try {
+      const { parseResumeDSL } = require("@/services/dslParser");
+      const ast = parseResumeDSL(source);
+      if (ast.name && ast.name !== "Your Name") {
+        title = `${ast.name}'s Resume`;
+      }
+    } catch (e) {
+      console.warn("Failed to parse name for title:", e);
+    }
+
+    const doc = await createDocument(title, source, selected, customCSS);
     await setActiveDocumentId(doc.id);
     await setOnboardingDone();
     router.replace("/(main)/dashboard");

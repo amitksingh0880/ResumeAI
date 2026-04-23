@@ -6,12 +6,14 @@ import {
   Text,
   View,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import {
   getAllDocuments,
   getActiveDocumentId,
   getDocumentById,
   setActiveDocumentId,
+  deleteDocument,
   type ResumeDocument,
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
@@ -22,6 +24,7 @@ import {
   LucideChevronRight,
   LucideTarget,
   LucideSettings,
+  LucideTrash2,
 } from "lucide-react-native";
 
 export default function DashboardScreen() {
@@ -70,6 +73,24 @@ export default function DashboardScreen() {
   async function handleSwitch(id: string) {
     await setActiveDocumentId(id);
     loadData();
+  }
+
+  async function handleDelete(id: string) {
+    Alert.alert(
+      "Delete Resume",
+      "Are you sure you want to permanently delete this repository?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            await deleteDocument(id);
+            loadData();
+          }
+        }
+      ]
+    );
   }
 
   const score = skillCount > 0 ? Math.min(60 + skillCount * 2, 99) : 85;
@@ -213,8 +234,25 @@ export default function DashboardScreen() {
                 }}
               >
                 <LucideFileText color={doc?.id === d.id ? "#00F0FF" : "#444"} size={16} />
-                <Text style={{ color: doc?.id === d.id ? "#FFFFFF" : "#8E8E93", fontSize: 12, fontWeight: "700", marginLeft: 12, flex: 1 }}>{d.title}</Text>
-                {doc?.id === d.id && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#00F0FF" }} />}
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={{ color: doc?.id === d.id ? "#FFFFFF" : "#8E8E93", fontSize: 13, fontWeight: "700" }}>{d.title}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+                    <Text style={{ color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>{d.templateId.toUpperCase()}</Text>
+                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#333", marginHorizontal: 6 }} />
+                    <Text style={{ color: "#444", fontSize: 9, fontWeight: "900" }}>
+                      {new Date(d.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+                
+                <TouchableOpacity 
+                  onPress={() => handleDelete(d.id)}
+                  style={{ padding: 8 }}
+                >
+                  <LucideTrash2 color="#444" size={14} />
+                </TouchableOpacity>
+
+                {doc?.id === d.id && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#00F0FF", marginLeft: 8 }} />}
               </TouchableOpacity>
             ))}
           </View>

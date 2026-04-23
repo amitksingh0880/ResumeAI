@@ -88,7 +88,7 @@ export default function ImportScreen() {
     setLoading(true);
     try {
       const { dsl, css } = await convertResumeWithStyle(apiKey, rawText);
-      await saveImportDraft(dsl, css);
+      await saveImportDraft(dsl, css, uploadedFile?.name);
       router.push({ pathname: "/(onboarding)/template-picker" });
     } catch (e) {
       console.error("AI Conversion Error:", e);

@@ -28,6 +28,7 @@ const KEYS = {
   ONBOARDING_DONE: "resume:onboardingDone",
   IMPORT_DRAFT: "resume:importDraft",
   IMPORT_DRAFT_CSS: "resume:importDraftCSS",
+  IMPORT_DRAFT_FILENAME: "resume:importDraftFilename",
 };
 
 // ─── Documents ─────────────────────────────────────────────────────────────
@@ -35,7 +36,9 @@ const KEYS = {
 export async function getAllDocuments(): Promise<ResumeDocument[]> {
   try {
     const raw = await AsyncStorage.getItem(KEYS.DOCUMENTS);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const docs: ResumeDocument[] = JSON.parse(raw);
+    return docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   } catch {
     return [];
   }
@@ -49,13 +52,6 @@ export async function saveDocument(doc: ResumeDocument): Promise<void> {
   await AsyncStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(docs));
 }
 
-export async function deleteDocument(id: string): Promise<void> {
-  const docs = await getAllDocuments();
-  await AsyncStorage.setItem(
-    KEYS.DOCUMENTS,
-    JSON.stringify(docs.filter((d) => d.id !== id))
-  );
-}
 
 export async function getDocumentById(id: string): Promise<ResumeDocument | null> {
   const docs = await getAllDocuments();
@@ -138,6 +134,17 @@ export async function saveApiKey(key: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.API_KEY, key);
 }
 
+export async function deleteDocument(id: string): Promise<void> {
+  const docs = await getAllDocuments();
+  const filtered = docs.filter(d => d.id !== id);
+  await AsyncStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(filtered));
+  
+  const activeId = await getActiveDocumentId();
+  if (activeId === id) {
+    await AsyncStorage.removeItem(KEYS.ACTIVE_ID);
+  }
+}
+
 // ─── Onboarding ─────────────────────────────────────────────────────────────
 
 export async function isOnboardingDone(): Promise<boolean> {
@@ -155,9 +162,10 @@ export async function clearAllData(): Promise<void> {
 
 // ─── Import Draft ──────────────────────────────────────────────────────────
 
-export async function saveImportDraft(source: string, css?: string): Promise<void> {
+export async function saveImportDraft(source: string, css?: string, filename?: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.IMPORT_DRAFT, source);
   if (css) await AsyncStorage.setItem(KEYS.IMPORT_DRAFT_CSS, css);
+  if (filename) await AsyncStorage.setItem(KEYS.IMPORT_DRAFT_FILENAME, filename);
 }
 
 export async function getImportDraft(): Promise<string | null> {
@@ -166,4 +174,8 @@ export async function getImportDraft(): Promise<string | null> {
 
 export async function getImportDraftCSS(): Promise<string | null> {
   return AsyncStorage.getItem(KEYS.IMPORT_DRAFT_CSS);
+}
+
+export async function getImportDraftFilename(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.IMPORT_DRAFT_FILENAME);
 }
