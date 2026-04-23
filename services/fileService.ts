@@ -50,11 +50,16 @@ export async function pickAndReadFile(): Promise<PickedFile | null> {
       // For PDFs: strip binary junk, extract readable text
       if (mimeType === "application/pdf" || name.endsWith(".pdf")) {
         text = extractReadableTextFromPDF(rawText);
+        
+        // If standard extraction failed, try OCR fallback
+        if (!text && Platform.OS === "web") {
+          text = await performWebOCR(uri);
+        }
       } else {
         text = rawText;
       }
-    } catch {
-      throw new Error("Could not read file. Try copying and pasting the text instead.");
+    } catch (e: any) {
+      throw new Error(e.message || "Could not read file. Try copying and pasting the text instead.");
     }
   } else {
     // Native: use expo-file-system
@@ -102,9 +107,53 @@ function extractReadableTextFromPDF(raw: string): string {
   const filtered = printable
     .filter((s) => {
       // Keep strings that look like words (have letters)
-      return /[a-zA-Z]{3,}/.test(s) && !s.startsWith("%PDF") && !s.includes("endobj");
+      const hasLetters = /[a-zA-Z]{3,}/.test(s);
+      const isPdfStructure = /obj|stream|endstream|Filter|FlateDecode|Length|Type|Page|Catalog|Pages|Resources/.test(s);
+      const isPdfHeader = s.startsWith("%PDF");
+      
+      return hasLetters && !isPdfStructure && !isPdfHeader;
     })
     .join(" ");
 
+  // Final check for PDF source code markers in the concatenated string
+  const isPdfBinary = 
+    filtered.includes("%%EOF") || 
+    filtered.includes("/MediaBox") || 
+    filtered.includes("startxref") ||
+    filtered.includes("/Type") || 
+    filtered.includes("/Filter") ||
+    filtered.includes("/Contents");
+
+  if (isPdfBinary || filtered.length < 50) {
+    return ""; // Return empty to signal failure to pickAndReadFile
+  }
+
   return filtered.substring(0, 8000); // cap at 8K chars
+}
+
+/**
+ * Web-only OCR fallback using Tesseract.js.
+ * Requires: npm install tesseract.js
+ */
+async function performWebOCR(rawOrUri: string): Promise<string> {
+  try {
+    console.log("PDF extraction failed. Attempting OCR fallback via Tesseract...");
+    
+    // We use a dynamic import to keep the initial bundle light
+    // and prevent crashes on native if the package isn't installed.
+    const Tesseract = (await import('tesseract.js')).default;
+    
+    // Note: On web, the URI passed from expo-document-picker 
+    // is a valid blob/data URL that Tesseract can read directly.
+    const result = await Tesseract.recognize(rawOrUri, 'eng', {
+      logger: m => console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`),
+    });
+
+    console.log("OCR successful!");
+    return result.data.text;
+  } catch (error) {
+    console.error("OCR Fallback Error:", error);
+    // If OCR fails, return empty so the main logic shows the "Paste Text" alert.
+    return "";
+  }
 }

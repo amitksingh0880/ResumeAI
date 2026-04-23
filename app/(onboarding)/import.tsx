@@ -88,13 +88,16 @@ export default function ImportScreen() {
     setLoading(true);
     try {
       const { dsl, css } = await convertResumeWithStyle(apiKey, rawText);
+      
+      if (dsl.includes("ERROR: UNREADABLE_CONTENT")) {
+        throw new Error("The AI could not read your resume content. Please try copying and pasting the text instead.");
+      }
+
       await saveImportDraft(dsl, css, uploadedFile?.name);
       router.push({ pathname: "/(onboarding)/template-picker" });
-    } catch (e) {
+    } catch (e: any) {
       console.error("AI Conversion Error:", e);
-      await saveImportDraft(DEFAULT_RESUME_DSL);
-      Alert.alert("Conversion failed", "AI could not convert your resume. Using blank template.");
-      router.push({ pathname: "/(onboarding)/template-picker" });
+      Alert.alert("Import Failed", e.message || "AI could not read your resume. Try copying the text and pasting it in the 'Paste' tab.");
     } finally {
       setLoading(false);
     }
@@ -185,26 +188,30 @@ export default function ImportScreen() {
             ) : (
               <View>
                 {/* Success state */}
-                <View style={{ backgroundColor: "rgba(52,199,89,0.08)", borderRadius: 8, borderWidth: 1, borderColor: "rgba(52,199,89,0.3)", padding: 20, flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-                  <LucideCheckCircle2 color="#34C759" size={32} />
-                  <View style={{ marginLeft: 16, flex: 1 }}>
-                    <Text style={{ color: "#34C759", fontSize: 11, fontWeight: "900", letterSpacing: 1 }}>FILE READY</Text>
-                    <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
+                <View style={{ backgroundColor: "rgba(52,199,89,0.08)", borderRadius: 8, borderWidth: 1, borderColor: "rgba(52,199,89,0.3)", padding: 16, flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+                  <LucideCheckCircle2 color="#34C759" size={24} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={{ color: "#34C759", fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>FILE LOADED</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }} numberOfLines={1}>
                       {uploadedFile.name}
                     </Text>
-                    <Text style={{ color: "#8E8E93", fontSize: 11, marginTop: 2 }}>
-                      {uploadedFile.text.length.toLocaleString()} characters extracted
-                    </Text>
                   </View>
+                  <TouchableOpacity onPress={handlePickFile}>
+                    <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "800" }}>REPLACE</Text>
+                  </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  onPress={handlePickFile}
-                  activeOpacity={0.7}
-                  style={{ paddingVertical: 10, alignItems: "center" }}
-                >
-                  <Text style={{ color: "#8E8E93", fontSize: 12, fontWeight: "700" }}>↑ Replace with different file</Text>
-                </TouchableOpacity>
+                <Text style={{ color: "#8E8E93", fontSize: 11, fontWeight: "700", marginBottom: 8, letterSpacing: 1 }}>REVIEW EXTRACTED TEXT</Text>
+                <TextInput
+                  value={uploadedFile.text}
+                  onChangeText={(t) => setUploadedFile({ ...uploadedFile, text: t })}
+                  multiline
+                  style={{
+                    backgroundColor: "#121212", borderRadius: 4, borderWidth: 1, borderColor: "#1F1F1F",
+                    padding: 12, color: "#FFFFFF", fontSize: 12, minHeight: 120, maxHeight: 200,
+                    textAlignVertical: "top"
+                  }}
+                />
               </View>
             )}
 

@@ -134,15 +134,19 @@ export async function saveApiKey(key: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.API_KEY, key);
 }
 
-export async function deleteDocument(id: string): Promise<void> {
+export async function deleteMultipleDocuments(ids: string[]): Promise<void> {
   const docs = await getAllDocuments();
-  const filtered = docs.filter(d => d.id !== id);
+  const filtered = docs.filter(d => !ids.includes(d.id));
   await AsyncStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(filtered));
   
   const activeId = await getActiveDocumentId();
-  if (activeId === id) {
+  if (activeId && ids.includes(activeId)) {
     await AsyncStorage.removeItem(KEYS.ACTIVE_ID);
   }
+}
+
+export async function deleteDocument(id: string): Promise<void> {
+  await deleteMultipleDocuments([id]);
 }
 
 // ─── Onboarding ─────────────────────────────────────────────────────────────

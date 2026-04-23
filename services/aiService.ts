@@ -383,7 +383,14 @@ function computeLCS(a: string[], b: string[]): string[] {
 export async function convertResumeWithStyle(apiKey: string, rawText: string): Promise<{ dsl: string, css: string }> {
   const prompt = `
     You are an expert resume architect. I will give you a raw text resume.
-    1. Convert the content into our Resume DSL format (the LaTeX-like structure with \\name, \\role, \\contact, \\summary, and \\section).
+    
+    CRITICAL RULES:
+    1. DO NOT USE PLACEHOLDERS. Do not use names like "John Doe" or "Jane Smith" unless they are explicitly in the text.
+    2. USE ONLY PROVIDED CONTENT. If the "RESUME TEXT" below is empty, unreadable, or just binary garbage, respond ONLY with the word "ERROR: UNREADABLE_CONTENT".
+    3. Be faithful to the original data. Preserve every project, skill, and date found.
+    
+    TASK:
+    1. Convert the content into our Resume DSL format (the LaTeX-like structure with \name, \role, \contact, \summary, and \section).
     2. Analyze the likely layout of the original resume from the text (e.g. is it centered? two-column? minimalist?).
     3. Generate a CSS block that would make an HTML version of this DSL look like the original.
        Use these classes in your CSS: .header, .section-title, .job-header, .job-title, .job-company, .job-date, .skill-row, .skill-cat.

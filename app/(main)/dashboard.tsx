@@ -7,6 +7,7 @@ import {
   View,
   TouchableOpacity,
   Alert,
+  Platform,
 } from "react-native";
 import {
   getAllDocuments,
@@ -14,6 +15,7 @@ import {
   getDocumentById,
   setActiveDocumentId,
   deleteDocument,
+  deleteMultipleDocuments,
   type ResumeDocument,
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
@@ -25,6 +27,8 @@ import {
   LucideTarget,
   LucideSettings,
   LucideTrash2,
+  LucideSquare,
+  LucideCheckSquare,
 } from "lucide-react-native";
 
 export default function DashboardScreen() {
@@ -32,6 +36,8 @@ export default function DashboardScreen() {
   const [allDocs, setAllDocs] = useState<ResumeDocument[]>([]);
   const [skillCount, setSkillCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,24 +77,74 @@ export default function DashboardScreen() {
   }
 
   async function handleSwitch(id: string) {
+    if (isEditMode) {
+      toggleSelection(id);
+      return;
+    }
     await setActiveDocumentId(id);
     loadData();
   }
 
+  function toggleSelection(id: string) {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  }
+
+  function handleSelectAll() {
+    if (selectedIds.length === allDocs.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allDocs.map(d => d.id));
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+
+    const performDelete = async () => {
+      await deleteMultipleDocuments(selectedIds);
+      setSelectedIds([]);
+      setIsEditMode(false);
+      loadData();
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm(`Are you sure you want to delete ${selectedIds.length} repositories?`)) {
+        performDelete();
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Bulk Delete",
+      `Are you sure you want to delete ${selectedIds.length} repositories?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: performDelete }
+      ]
+    );
+  }
+
   async function handleDelete(id: string) {
+    const performDelete = async () => {
+      await deleteDocument(id);
+      loadData();
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to permanently delete this repository?")) {
+        performDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       "Delete Resume",
       "Are you sure you want to permanently delete this repository?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: async () => {
-            await deleteDocument(id);
-            loadData();
-          }
-        }
+        { text: "Delete", style: "destructive", onPress: performDelete }
       ]
     );
   }
@@ -219,42 +275,100 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── All Resumes ── */}
-        {allDocs.length > 1 && (
+        {allDocs.length > 0 && (
           <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>ALL REPOSITORIES</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>
+                {isEditMode ? `SELECTED (${selectedIds.length})` : "ALL REPOSITORIES"}
+              </Text>
+              
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                {isEditMode && (
+                  <TouchableOpacity onPress={handleSelectAll}>
+                    <Text style={{ color: "#00F0FF", fontSize: 11, fontWeight: "700" }}>
+                      {selectedIds.length === allDocs.length ? "DESELECT ALL" : "SELECT ALL"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => {
+                  setIsEditMode(!isEditMode);
+                  setSelectedIds([]);
+                }}>
+                  <Text style={{ color: isEditMode ? "#FF3B30" : "#00F0FF", fontSize: 11, fontWeight: "700" }}>
+                    {isEditMode ? "CANCEL" : "SELECT"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {allDocs.map((d) => (
-              <TouchableOpacity
+              <View
                 key={d.id}
-                onPress={() => handleSwitch(d.id)}
                 style={{
-                  backgroundColor: doc?.id === d.id ? "rgba(0,240,255,0.05)" : "#121212",
+                  backgroundColor: selectedIds.includes(d.id) ? "rgba(0,240,255,0.05)" : "#121212",
                   borderRadius: 8, borderWidth: 1,
-                  borderColor: doc?.id === d.id ? "#00F0FF" : "#1F1F1F",
-                  padding: 12, marginBottom: 8, flexDirection: "row", alignItems: "center"
+                  borderColor: selectedIds.includes(d.id) ? "#00F0FF" : "#1F1F1F",
+                  marginBottom: 8, flexDirection: "row", alignItems: "center"
                 }}
               >
-                <LucideFileText color={doc?.id === d.id ? "#00F0FF" : "#444"} size={16} />
-                <View style={{ marginLeft: 12, flex: 1 }}>
-                  <Text style={{ color: doc?.id === d.id ? "#FFFFFF" : "#8E8E93", fontSize: 13, fontWeight: "700" }}>{d.title}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
-                    <Text style={{ color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>{d.templateId.toUpperCase()}</Text>
-                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#333", marginHorizontal: 6 }} />
-                    <Text style={{ color: "#444", fontSize: 9, fontWeight: "900" }}>
-                      {new Date(d.createdAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-                
                 <TouchableOpacity 
-                  onPress={() => handleDelete(d.id)}
-                  style={{ padding: 8 }}
+                  onPress={() => handleSwitch(d.id)}
+                  style={{ flex: 1, padding: 12, flexDirection: "row", alignItems: "center" }}
+                  activeOpacity={0.7}
                 >
-                  <LucideTrash2 color="#444" size={14} />
+                  {isEditMode ? (
+                    <View style={{ marginRight: 12 }}>
+                      {selectedIds.includes(d.id) ? (
+                        <LucideCheckSquare color="#00F0FF" size={18} />
+                      ) : (
+                        <LucideSquare color="#444" size={18} />
+                      )}
+                    </View>
+                  ) : (
+                    <LucideFileText color={doc?.id === d.id ? "#00F0FF" : "#444"} size={16} />
+                  )}
+                  
+                  <View style={{ marginLeft: isEditMode ? 0 : 12, flex: 1 }}>
+                    <Text style={{ color: doc?.id === d.id || selectedIds.includes(d.id) ? "#FFFFFF" : "#8E8E93", fontSize: 13, fontWeight: "700" }}>{d.title}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+                      <Text style={{ color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>{d.templateId.toUpperCase()}</Text>
+                      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#333", marginHorizontal: 6 }} />
+                      <Text style={{ color: "#444", fontSize: 9, fontWeight: "900" }}>
+                        {new Date(d.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
                 </TouchableOpacity>
+                
+                {!isEditMode && (
+                  <TouchableOpacity 
+                    onPress={() => handleDelete(d.id)}
+                    style={{ padding: 12, marginRight: 4 }}
+                    activeOpacity={0.7}
+                  >
+                    <LucideTrash2 color="#FF3B30" size={16} />
+                  </TouchableOpacity>
+                )}
 
-                {doc?.id === d.id && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#00F0FF", marginLeft: 8 }} />}
-              </TouchableOpacity>
+                {doc?.id === d.id && !isEditMode && <View style={{ width: 4, height: 24, backgroundColor: "#00F0FF", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />}
+              </View>
             ))}
+
+            {isEditMode && selectedIds.length > 0 && (
+              <TouchableOpacity
+                onPress={handleBulkDelete}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: "#FF3B30",
+                  borderRadius: 4, paddingVertical: 14,
+                  alignItems: "center", marginTop: 8
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 11, letterSpacing: 1.5 }}>
+                  DELETE {selectedIds.length} SELECTED
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
