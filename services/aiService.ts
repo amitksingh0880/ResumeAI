@@ -41,7 +41,7 @@ export async function insertSkillIntoResume(
   userRole: string
 ): Promise<SkillInsertionResult> {
   const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
 
   const prompt = `You are a professional resume writer and LaTeX expert. You are working with a custom resume DSL (domain-specific language) that uses LaTeX-like syntax.
 
@@ -108,7 +108,7 @@ export async function scoreJobMatch(
   jobDescription: string
 ): Promise<JobMatchResult> {
   const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
 
   const prompt = `You are an expert ATS (Applicant Tracking System) and career coach.
 
@@ -149,7 +149,7 @@ export async function strengthenBullets(
   resumeSource: string
 ): Promise<AIBulletSuggestion[]> {
   const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
 
   const prompt = `You are a professional resume writer. Review these resume bullet points and suggest stronger, more impactful versions that use action verbs and quantifiable results.
 
@@ -180,7 +180,7 @@ export async function convertTextToDSL(
   plainText: string
 ): Promise<string> {
   const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
 
   const prompt = `You are a resume parser. Convert this plain text resume into our custom DSL format.
 
@@ -248,7 +248,7 @@ export async function magicRewrite(
   userRole: string
 ): Promise<{ improved: string; explanation: string }> {
   const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
 
   const prompt = `You are a world-class executive resume writer. 
   
@@ -287,7 +287,7 @@ export async function generateCareerRoadmap(
   currentRole: string
 ): Promise<{ steps: CareerStep[]; summary: string }> {
   const genAI = createClient(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
 
   const prompt = `You are a career strategist. Based on these skills and role, generate a 3-step growth roadmap.
 

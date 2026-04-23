@@ -229,7 +229,7 @@ export default function EditorScreen() {
       </KeyboardAvoidingView>
 
       <TouchableOpacity
-        onPress={() => router.push("/(main)/roadmap")}
+        onPress={() => router.push("/(modals)/add-skill")}
         activeOpacity={0.8}
         style={{
           position: "absolute",

@@ -7,6 +7,7 @@ import {
   setActiveDocumentId,
   setOnboardingDone,
 } from "@/services/storageService";
+import { LucideChevronLeft, LucideLayout, LucideCheckCircle2 } from "lucide-react-native";
 
 export default function TemplatePickerScreen() {
   const { source } = useLocalSearchParams<{ source: string }>();
@@ -22,14 +23,15 @@ export default function TemplatePickerScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
       <ScrollView contentContainerStyle={{ padding: 24 }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24 }} activeOpacity={0.7}>
-          <Text style={{ color: "#00F0FF", fontSize: 14, fontWeight: "700" }}>← Back</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24, flexDirection: "row", alignItems: "center" }} activeOpacity={0.7}>
+          <LucideChevronLeft color="#00F0FF" size={20} />
+          <Text style={{ color: "#00F0FF", fontSize: 14, fontWeight: "700", marginLeft: 4 }}>Back</Text>
         </TouchableOpacity>
 
-        <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>SELECT TEMPLATE</Text>
-        <Text style={{ fontSize: 26, fontWeight: "900", color: "#FFFFFF", marginBottom: 6 }}>Choose Layout</Text>
-        <Text style={{ fontSize: 13, color: "#8E8E93", marginBottom: 28 }}>
-          You can switch anytime — your source stays the same
+        <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>SELECT ARCHITECTURE</Text>
+        <Text style={{ fontSize: 26, fontWeight: "900", color: "#FFFFFF", marginBottom: 6 }}>Choose Template</Text>
+        <Text style={{ fontSize: 13, color: "#8E8E93", marginBottom: 28, lineHeight: 20 }}>
+          Your data is decoupled from the design. Switch layouts instantly without affecting your resume source code.
         </Text>
 
         <View style={{ marginBottom: 32 }}>
@@ -39,7 +41,7 @@ export default function TemplatePickerScreen() {
               onPress={() => setSelected(t.id)}
               activeOpacity={0.7}
               style={{
-                backgroundColor: selected === t.id ? "#1A1A1A" : "#121212",
+                backgroundColor: selected === t.id ? "rgba(0, 240, 255, 0.05)" : "#121212",
                 borderRadius: 8, borderWidth: 1.5,
                 borderColor: selected === t.id ? "#00F0FF" : "#1F1F1F",
                 padding: 16, flexDirection: "row", alignItems: "center",
@@ -51,7 +53,7 @@ export default function TemplatePickerScreen() {
                 backgroundColor: t.accentColor, opacity: 0.85,
                 alignItems: "center", justifyContent: "center", marginRight: 16,
               }}>
-                <Text style={{ fontSize: 20 }}>📄</Text>
+                <LucideLayout color="#FFFFFF" size={22} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
@@ -63,9 +65,7 @@ export default function TemplatePickerScreen() {
                 <Text style={{ fontSize: 12, color: "#8E8E93", lineHeight: 18 }}>{t.description}</Text>
               </View>
               {selected === t.id && (
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#00F0FF", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ color: "#000", fontSize: 12, fontWeight: "900" }}>✓</Text>
-                </View>
+                <LucideCheckCircle2 color="#00F0FF" size={20} />
               )}
             </TouchableOpacity>
           ))}
@@ -74,10 +74,10 @@ export default function TemplatePickerScreen() {
         <TouchableOpacity
           onPress={handleCreate}
           activeOpacity={0.8}
-          style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingVertical: 16, alignItems: "center" }}
+          style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingVertical: 18, alignItems: "center" }}
         >
           <Text style={{ color: "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
-            CREATE RESUME →
+            INITIALIZE SYSTEM →
           </Text>
         </TouchableOpacity>
       </ScrollView>

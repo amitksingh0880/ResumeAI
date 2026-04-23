@@ -1,25 +1,24 @@
 import React from "react";
 import {
-  Pressable,
-  Text,
   ActivityIndicator,
   StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
   ViewStyle,
   TextStyle,
-  View,
   Platform,
 } from "react-native";
 
 interface ButtonProps {
   onPress?: () => void;
   title: string;
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "ai";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
   icon?: React.ReactNode;
+  style?: ViewStyle;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -29,73 +28,129 @@ export const Button: React.FC<ButtonProps> = ({
   size = "md",
   loading = false,
   disabled = false,
-  style,
-  textStyle,
   icon,
+  style,
 }) => {
-  const bg = {
-    primary:   { bg: "#00F0FF", border: "#00F0FF", text: "#000000" },
-    secondary: { bg: "#FFFFFF", border: "#FFFFFF",  text: "#000000" },
-    outline:   { bg: "transparent", border: "#1F1F1F", text: "#FFFFFF" },
-    ghost:     { bg: "transparent", border: "transparent", text: "#00F0FF" },
-    ai:        { bg: "#8B5CF6", border: "#8B5CF6", text: "#FFFFFF" },
-  }[variant];
-
-  const pad = {
-    sm:  { paddingVertical: 6,  paddingHorizontal: 12 },
-    md:  { paddingVertical: 12, paddingHorizontal: 20 },
-    lg:  { paddingVertical: 16, paddingHorizontal: 24 },
-  }[size];
-
-  // On web, use onClick in addition to onPress for reliability
-  const webProps = Platform.OS === "web" ? { onClick: onPress } : {};
+  const isWeb = Platform.OS === "web";
 
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={onPress}
+      activeOpacity={0.7}
       disabled={disabled || loading}
-      accessibilityRole="button"
-      {...webProps}
-      style={({ pressed }) => [
+      style={[
         styles.base,
-        pad,
-        {
-          backgroundColor: disabled ? "#1A1A1A" : bg.bg,
-          borderColor: disabled ? "#1A1A1A" : bg.border,
-          opacity: pressed ? 0.85 : 1,
-        },
+        styles[variant],
+        styles[size],
+        disabled && styles.disabled,
         style,
+        // @ts-ignore - Web-only property
+        isWeb && { cursor: disabled || loading ? "default" : "pointer" },
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={bg.text} size="small" />
+        <ActivityIndicator color={variant === "primary" ? "#000" : "#00F0FF"} size="small" />
       ) : (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          {icon}
-          {title ? (
-            <Text style={[styles.text, { color: disabled ? "#444" : bg.text }, textStyle]}>
-              {title}
-            </Text>
-          ) : null}
+        <View style={styles.content}>
+          {icon && <View style={styles.iconContainer}>{icon}</View>}
+          <Text
+            style={[
+              styles.textBase,
+              styles[`${variant}Text` as keyof typeof styles] as TextStyle,
+              styles[`${size}Text` as keyof typeof styles] as TextStyle,
+              disabled && styles.disabledText,
+            ]}
+          >
+            {title}
+          </Text>
         </View>
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   base: {
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 4,
-    borderWidth: 1,
-    // Web: ensure the button is always clickable
-    ...(Platform.OS === "web" ? { cursor: "pointer" } as any : {}),
+    flexDirection: "row",
   },
-  text: {
-    fontSize: 12,
-    fontWeight: "800",
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconContainer: {
+    marginRight: 8,
+  },
+  // Variants
+  primary: {
+    backgroundColor: "#00F0FF",
+  },
+  secondary: {
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  outline: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#1F1F1F",
+  },
+  ghost: {
+    backgroundColor: "transparent",
+  },
+  danger: {
+    backgroundColor: "#FF3B30",
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  // Sizes
+  sm: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  md: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  lg: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  // Text Styles
+  textBase: {
+    fontWeight: "900",
     letterSpacing: 1,
-    textTransform: "uppercase",
+    textAlign: "center",
+  },
+  primaryText: {
+    color: "#000000",
+  },
+  secondaryText: {
+    color: "#FFFFFF",
+  },
+  outlineText: {
+    color: "#00F0FF",
+  },
+  ghostText: {
+    color: "#8E8E93",
+  },
+  dangerText: {
+    color: "#FFFFFF",
+  },
+  disabledText: {
+    color: "#444",
+  },
+  smText: {
+    fontSize: 10,
+  },
+  mdText: {
+    fontSize: 12,
+  },
+  lgText: {
+    fontSize: 14,
   },
 });

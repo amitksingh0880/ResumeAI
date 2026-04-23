@@ -1,10 +1,9 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { SafeAreaView, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { getActiveDocumentId, getDocumentById } from "@/services/storageService";
 import { parseResumeDSL, ResumeSkillGroup } from "@/services/dslParser";
-import { LucideChevronLeft, LucideLayoutGrid, LucidePlus } from "lucide-react-native";
-import { Card, Badge, Button } from "@/components/ui";
+import { LucideChevronLeft, LucideLayoutGrid, LucidePlus, LucideZap } from "lucide-react-native";
 
 interface SkillCategory {
   name: string;
@@ -46,10 +45,6 @@ export default function SkillsScreen() {
             if (!catMap[sg.category]) catMap[sg.category] = [];
             catMap[sg.category].push(...sg.items);
           }
-          if (item.type === "skill") {
-            if (!catMap["Other"]) catMap["Other"] = [];
-            catMap["Other"].push(item.name);
-          }
         }
       }
 
@@ -65,14 +60,16 @@ export default function SkillsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderColor: "#1F1F1F" }}>
-        <Pressable onPress={() => router.back()} style={{ marginRight: 16 }}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={{ marginRight: 16 }}>
           <LucideChevronLeft color="#00F0FF" size={24} />
-        </Pressable>
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>TECH STACK</Text>
           <Text style={{ fontSize: 18, fontWeight: "800", color: "#FFFFFF" }}>Skill Matrix</Text>
         </View>
-        <Badge label={`${totalSkills} UNITS`} variant="primary" />
+        <View style={{ backgroundColor: "#1A1A1A", borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "#2A2A2A" }}>
+          <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900" }}>{totalSkills} NODES</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -87,13 +84,13 @@ export default function SkillsScreen() {
         
         <View style={{ gap: 20 }}>
           {categories.map((cat) => (
-            <Card key={cat.name} variant="glass" padding={16}>
+            <View key={cat.name} style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 20 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: cat.color }} />
                   <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13, letterSpacing: 0.5 }}>{cat.name.toUpperCase()}</Text>
                 </View>
-                <Text style={{ color: "#444", fontSize: 10, fontWeight: "800" }}>{cat.skills.length} NODES</Text>
+                <Text style={{ color: "#444", fontSize: 10, fontWeight: "800" }}>{cat.skills.length} UNITS</Text>
               </View>
               
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -106,22 +103,43 @@ export default function SkillsScreen() {
                     paddingHorizontal: 10, 
                     paddingVertical: 6,
                   }}>
-                    <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "600" }}>{skill.toUpperCase()}</Text>
+                    <Text style={{ color: "#8E8E93", fontSize: 11, fontWeight: "700" }}>{skill.toUpperCase()}</Text>
                   </View>
                 ))}
               </View>
-            </Card>
+            </View>
           ))}
         </View>
 
-        <Button 
-          title="ADD NEW CATEGORY" 
-          variant="outline" 
-          size="md" 
-          icon={<LucidePlus color="#FFFFFF" size={18} />}
-          style={{ marginTop: 40, borderStyle: "dashed" }}
-        />
+        <TouchableOpacity
+          onPress={() => router.push("/(modals)/add-skill")}
+          activeOpacity={0.7}
+          style={{ 
+            marginTop: 32, borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", 
+            borderStyle: "dashed", padding: 20, alignItems: "center", flexDirection: "row", 
+            justifyContent: "center", gap: 10, backgroundColor: "#0D0D0D"
+          }}
+        >
+          <LucidePlus color="#00F0FF" size={18} />
+          <Text style={{ color: "#00F0FF", fontSize: 13, fontWeight: "800", letterSpacing: 1 }}>INJECT NEW SKILL</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Magic FAB */}
+      <TouchableOpacity
+        onPress={() => router.push("/(modals)/add-skill")}
+        activeOpacity={0.8}
+        style={{
+          position: "absolute", bottom: 24, right: 24,
+          width: 56, height: 56, borderRadius: 28,
+          backgroundColor: "#8B5CF6", alignItems: "center", justifyContent: "center",
+          elevation: 10
+        }}
+      >
+        <LucideZap color="#FFFFFF" size={24} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
