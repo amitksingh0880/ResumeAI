@@ -28,6 +28,7 @@ export default function ImportScreen() {
   const [mode, setMode] = useState<Mode>("upload");
   const [pastedText, setPastedText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const [uploadedFile, setUploadedFile] = useState<{ name: string; text: string } | null>(null);
 
   useEffect(() => {
@@ -37,14 +38,16 @@ export default function ImportScreen() {
   // ── File Upload ──────────────────────────────────────────────────────────
   async function handlePickFile() {
     setLoading(true);
+    setOcrProgress(null);
     try {
-      const file = await pickAndReadFile();
+      const file = await pickAndReadFile((p) => setOcrProgress(p));
       if (!file) { setLoading(false); return; }
       setUploadedFile({ name: file.name, text: file.text });
     } catch (e: any) {
       Alert.alert("Upload Failed", e.message ?? "Could not read file.");
     } finally {
       setLoading(false);
+      setOcrProgress(null);
     }
   }
 
@@ -168,8 +171,16 @@ export default function ImportScreen() {
                 {loading ? (
                   <>
                     <ActivityIndicator color="#00F0FF" size="large" />
-                    <Text style={{ color: "#8E8E93", fontSize: 12, fontWeight: "700", marginTop: 16, letterSpacing: 1 }}>
-                      READING FILE...
+                    <Text style={{ color: "#00F0FF", fontSize: 13, fontWeight: "900", marginTop: 16, letterSpacing: 1 }}>
+                      {ocrProgress !== null ? `SCANNING: ${ocrProgress}%` : "READING FILE..."}
+                    </Text>
+                    {ocrProgress !== null && (
+                      <View style={{ width: 200, height: 2, backgroundColor: "#1A1A1A", marginTop: 12, borderRadius: 1, overflow: "hidden" }}>
+                        <View style={{ width: `${ocrProgress}%`, height: "100%", backgroundColor: "#00F0FF" }} />
+                      </View>
+                    )}
+                    <Text style={{ color: "#444", fontSize: 10, marginTop: 8, textAlign: "center" }}>
+                      {ocrProgress !== null ? "Using OCR engine for difficult PDF..." : "Attempting fast extraction..."}
                     </Text>
                   </>
                 ) : (

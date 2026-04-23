@@ -16,10 +16,10 @@ export interface PickedFile {
 
 /**
  * Opens a file picker dialog and returns the text content of the picked file.
- * Supports: .txt, .md, .tex, .pdf* (best-effort), .doc*, .rtf
- * (*PDF text extraction on web is best-effort via raw text parsing)
  */
-export async function pickAndReadFile(): Promise<PickedFile | null> {
+export async function pickAndReadFile(
+  onProgress?: (percent: number) => void
+): Promise<PickedFile | null> {
   const result = await DocumentPicker.getDocumentAsync({
     type: [
       "text/plain",
@@ -53,7 +53,7 @@ export async function pickAndReadFile(): Promise<PickedFile | null> {
         
         // If standard extraction failed, try OCR fallback
         if (!text && Platform.OS === "web") {
-          text = await performWebOCR(uri);
+          text = await performWebOCR(uri, onProgress);
         }
       } else {
         text = rawText;
@@ -133,27 +133,57 @@ function extractReadableTextFromPDF(raw: string): string {
 
 /**
  * Web-only OCR fallback using Tesseract.js.
- * Requires: npm install tesseract.js
  */
-async function performWebOCR(rawOrUri: string): Promise<string> {
+async function performWebOCR(
+  rawOrUri: string, 
+  onProgress?: (percent: number) => void
+): Promise<string> {
   try {
     console.log("PDF extraction failed. Attempting OCR fallback via Tesseract...");
     
-    // We use a dynamic import to keep the initial bundle light
-    // and prevent crashes on native if the package isn't installed.
-    const Tesseract = (await import('tesseract.js')).default;
+    let Tesseract: any;
     
-    // Note: On web, the URI passed from expo-document-picker 
-    // is a valid blob/data URL that Tesseract can read directly.
+    // Step 1: Try local package
+    try {
+      Tesseract = (await import('tesseract.js')).default;
+    } catch (e) {
+      console.warn("Local Tesseract.js import failed, trying CDN fallback...", e);
+      Tesseract = await loadTesseractFromCDN();
+    }
+
+    if (!Tesseract) {
+      throw new Error("Could not load OCR engine.");
+    }
+    
     const result = await Tesseract.recognize(rawOrUri, 'eng', {
-      logger: m => console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`),
+      logger: (m: any) => {
+        if (m.status === 'recognizing text') {
+          const percent = Math.round(m.progress * 100);
+          console.log(`OCR Progress: ${percent}%`);
+          onProgress?.(percent);
+        }
+      },
     });
 
     console.log("OCR successful!");
     return result.data.text;
   } catch (error) {
     console.error("OCR Fallback Error:", error);
-    // If OCR fails, return empty so the main logic shows the "Paste Text" alert.
     return "";
   }
+}
+
+/**
+ * Dynamically loads Tesseract.js from CDN if local module fails.
+ */
+function loadTesseractFromCDN(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Tesseract) return resolve((window as any).Tesseract);
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload = () => resolve((window as any).Tesseract);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
 }
