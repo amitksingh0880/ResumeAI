@@ -74,7 +74,7 @@ export default function EditorScreen() {
     setExporting(true);
     try {
       const ast = parseResumeDSL(source);
-      const html = renderTemplate(doc?.selectedTemplate || "elite-latex", ast);
+      const html = renderTemplate(doc?.templateId || "elite-latex", ast);
       await exportToPDF(html, doc?.title || "Resume");
     } catch (e: any) {
       Alert.alert("Export Failed", e.message);
