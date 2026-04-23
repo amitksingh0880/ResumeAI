@@ -121,7 +121,11 @@ export function parseResumeDSL(source: string): ResumeAST {
     raw: source,
   };
 
-  const lines = source.split("\n");
+  // Pre-process: collapse multi-line commands into single lines so line-by-line parsing works
+  let processedSource = source.replace(/\\contact\s*{([^}]*)}/gs, (m, p1) => `\\contact{${p1.replace(/[\r\n]+/g, '  ')}}`);
+  processedSource = processedSource.replace(/\\summary\s*{([^}]*)}/gs, (m, p1) => `\\summary{${p1.replace(/[\r\n]+/g, ' ')}}`);
+
+  const lines = processedSource.split(/\r?\n/);
   let currentSection: ResumeSection | null = null;
   let currentJob: ResumeJob | null = null;
 
@@ -237,6 +241,33 @@ export function parseResumeDSL(source: string): ResumeAST {
         issuer: args[1] || "",
         year: args[2] || "",
       });
+      continue;
+    }
+
+    // --- LaTeX Fallbacks (\subsection -> header, \item -> bullet) ---
+    if (line.startsWith("\\subsection{")) {
+      if (currentJob) currentSection.items.push(currentJob);
+      const { args } = extractArgs(line, 11, 1);
+      // Treat subsection as a "job" without company/date for now
+      currentJob = {
+        type: "job",
+        title: args[0] || "",
+        company: "",
+        date: "",
+        bullets: [],
+      };
+      continue;
+    }
+
+    if (line.startsWith("\\item{") || line.startsWith("\\item ")) {
+      const isBraced = line.startsWith("\\item{");
+      const { value } = isBraced ? extractArg(line, 5) : { value: line.substring(5).trim() };
+      
+      if (currentJob) {
+        currentJob.bullets.push(value);
+      } else {
+        currentSection.items.push({ type: "bullet", text: value });
+      }
       continue;
     }
   }

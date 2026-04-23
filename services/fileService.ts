@@ -134,28 +134,43 @@ function extractReadableTextFromPDF(raw: string): string {
 /**
  * Web-only OCR fallback using Tesseract.js.
  */
+/**
+ * Web-only OCR fallback using Tesseract.js.
+ */
 async function performWebOCR(
   rawOrUri: string, 
   onProgress?: (percent: number) => void
 ): Promise<string> {
   try {
-    console.log("PDF extraction failed. Attempting OCR fallback via Tesseract...");
+    console.log("Attempting PDF-to-Image OCR fallback...");
     
-    let Tesseract: any;
-    
-    // Step 1: Try local package
-    try {
-      Tesseract = (await import('tesseract.js')).default;
-    } catch (e) {
-      console.warn("Local Tesseract.js import failed, trying CDN fallback...", e);
-      Tesseract = await loadTesseractFromCDN();
-    }
+    const Tesseract = await loadTesseractFromCDN();
+    if (!Tesseract) throw new Error("Could not load Tesseract engine.");
 
-    if (!Tesseract) {
-      throw new Error("Could not load OCR engine.");
-    }
+    // PDF.js loading for PDF-to-Image conversion
+    console.log("Loading PDF.js for rendering...");
+    const pdfjsLib = await loadPdfJsFromCDN();
     
-    const result = await Tesseract.recognize(rawOrUri, 'eng', {
+    // Load the PDF
+    const pdf = await pdfjsLib.getDocument(rawOrUri).promise;
+    const page = await pdf.getPage(1); // Get first page
+    
+    // Render page to canvas
+    const viewport = page.getViewport({ scale: 2.0 }); // High scale for better OCR
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    if (!context) throw new Error("Could not create canvas context");
+    
+    await page.render({ canvasContext: context, viewport }).promise;
+    
+    // Convert canvas to image data URL
+    const imageData = canvas.toDataURL('image/png');
+
+    // Perform OCR on the image
+    const result = await Tesseract.recognize(imageData, 'eng', {
       logger: (m: any) => {
         if (m.status === 'recognizing text') {
           const percent = Math.round(m.progress * 100);
@@ -174,15 +189,34 @@ async function performWebOCR(
 }
 
 /**
- * Dynamically loads Tesseract.js from CDN if local module fails.
+ * Dynamically loads Tesseract.js from CDN.
  */
 function loadTesseractFromCDN(): Promise<any> {
   return new Promise((resolve, reject) => {
     if ((window as any).Tesseract) return resolve((window as any).Tesseract);
-    
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
     script.onload = () => resolve((window as any).Tesseract);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Dynamically loads PDF.js from CDN.
+ */
+function loadPdfJsFromCDN(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).pdfjsLib) return resolve((window as any).pdfjsLib);
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      const pdfjsLib = (window as any).pdfjsLib;
+      // Set worker path
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve(pdfjsLib);
+    };
     script.onerror = reject;
     document.head.appendChild(script);
   });
