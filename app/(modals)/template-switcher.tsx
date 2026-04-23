@@ -26,14 +26,16 @@ export default function TemplateSwitcherModal() {
 
   async function handleApply(templateId: string) {
     if (!doc) return;
+    const id = await getActiveDocumentId();
     const updatedDoc = { ...doc, templateId, updatedAt: Date.now() };
     await saveDocument(updatedDoc);
     setDoc(updatedDoc);
     setSelected(templateId);
-    // Give user a moment to see the change
+    
+    // Briefly show selection before closing
     setTimeout(() => {
-      router.dismiss();
-    }, 500);
+      router.back();
+    }, 300);
   }
 
   return (
@@ -41,10 +43,10 @@ export default function TemplateSwitcherModal() {
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderColor: "#1F1F1F" }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>INTERFACE</Text>
+          <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>VISUAL ENGINE</Text>
           <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginTop: 2 }}>Switch Template</Text>
         </View>
-        <TouchableOpacity onPress={() => router.dismiss()} activeOpacity={0.7} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={{ padding: 4 }}>
           <LucideX color="#8E8E93" size={22} />
         </TouchableOpacity>
       </View>

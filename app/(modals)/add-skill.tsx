@@ -55,7 +55,7 @@ export default function AddSkillModal() {
         "API Key Required",
         "Add your Groq API key in Settings to use AI skill insertion.",
         [
-          { text: "Go to Settings", onPress: () => { router.dismiss(); router.push("/(main)/settings"); } },
+          { text: "Go to Settings", onPress: () => { router.replace("/(main)/settings"); } },
           { text: "Cancel" },
         ]
       );
@@ -78,7 +78,11 @@ export default function AddSkillModal() {
   async function handleAccept() {
     if (!result || !doc) return;
     await updateDocumentSource(doc.id, result.updatedSource, `Added skill: ${skill}`);
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(main)/editor");
+    }
   }
 
   return (
