@@ -1,39 +1,30 @@
-import { cn } from "@/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
 import React from "react";
-import { Text as RNText, type TextProps as RNTextProps } from "react-native";
+import { Text as RNText, type TextProps as RNTextProps, StyleSheet } from "react-native";
 
-const textVariants = cva("text-foreground-DEFAULT", {
-  variants: {
-    variant: {
-      default: "text-foreground-DEFAULT",
-      h1: "text-3xl font-bold text-foreground-DEFAULT",
-      h2: "text-2xl font-bold text-foreground-DEFAULT",
-      h3: "text-xl font-semibold text-foreground-DEFAULT",
-      h4: "text-lg font-semibold text-foreground-DEFAULT",
-      lead: "text-base text-foreground-secondary",
-      body: "text-sm text-foreground-DEFAULT",
-      muted: "text-sm text-muted-DEFAULT",
-      small: "text-xs text-muted-DEFAULT",
-      code: "text-sm font-mono text-accent-DEFAULT",
-      label: "text-xs font-semibold uppercase tracking-wider text-muted-DEFAULT",
-    },
-  },
-  defaultVariants: {
-    variant: "default",
-  },
-});
+type Variant = "default" | "h1" | "h2" | "h3" | "h4" | "lead" | "body" | "muted" | "small" | "code" | "label";
 
-export interface TextProps
-  extends RNTextProps,
-    VariantProps<typeof textVariants> {
-  className?: string;
+export interface TextProps extends RNTextProps {
+  variant?: Variant;
 }
 
-export function Text({ variant, className, ...props }: TextProps) {
+const variantStyles: Record<Variant, object> = {
+  default: { fontSize: 16, color: "#FFFFFF" },
+  h1: { fontSize: 32, fontWeight: "900", color: "#FFFFFF" },
+  h2: { fontSize: 24, fontWeight: "800", color: "#FFFFFF" },
+  h3: { fontSize: 20, fontWeight: "700", color: "#FFFFFF" },
+  h4: { fontSize: 18, fontWeight: "600", color: "#FFFFFF" },
+  lead: { fontSize: 16, color: "#8E8E93" },
+  body: { fontSize: 14, color: "#FFFFFF" },
+  muted: { fontSize: 14, color: "#8E8E93" },
+  small: { fontSize: 12, color: "#8E8E93" },
+  code: { fontSize: 13, color: "#00F0FF" },
+  label: { fontSize: 11, fontWeight: "700", color: "#8E8E93", letterSpacing: 1, textTransform: "uppercase" },
+};
+
+export function Text({ variant = "default", style, ...props }: TextProps) {
   return (
     <RNText
-      className={cn(textVariants({ variant }), className)}
+      style={[variantStyles[variant], style]}
       {...props}
     />
   );

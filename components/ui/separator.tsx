@@ -1,21 +1,20 @@
-import { cn } from "@/lib/utils";
 import React from "react";
-import { View } from "react-native";
+import { View, ViewStyle } from "react-native";
 
 export function Separator({
-  className,
   orientation = "horizontal",
+  style,
 }: {
-  className?: string;
   orientation?: "horizontal" | "vertical";
+  style?: ViewStyle;
 }) {
   return (
     <View
-      className={cn(
-        "bg-border-DEFAULT",
-        orientation === "horizontal" ? "h-px w-full" : "w-px h-full",
-        className
-      )}
+      style={[
+        { backgroundColor: "#1F1F1F" },
+        orientation === "horizontal" ? { height: 1, width: "100%" } : { width: 1, height: "100%" },
+        style,
+      ]}
     />
   );
 }

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { TEMPLATES } from "@/services/templateRenderer";
 import {
   createDocument,
@@ -16,74 +16,70 @@ export default function TemplatePickerScreen() {
     const doc = await createDocument("My Resume", source || "", selected);
     await setActiveDocumentId(doc.id);
     await setOnboardingDone();
-    router.replace("/(main)/editor");
+    router.replace("/(main)/dashboard");
   }
 
-  const STYLE_COLORS: Record<string, string> = {
-    Classic: "#8B949E", Modern: "#00ADB5", Sidebar: "#4A90D9", "Two-Column": "#A371F7",
-  };
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0D1117" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
       <ScrollView contentContainerStyle={{ padding: 24 }}>
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 24 }}>
-          <Text style={{ color: "#58A6FF", fontSize: 14 }}>← Back</Text>
-        </Pressable>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24 }} activeOpacity={0.7}>
+          <Text style={{ color: "#00F0FF", fontSize: 14, fontWeight: "700" }}>← Back</Text>
+        </TouchableOpacity>
 
-        <Text style={{ fontSize: 26, fontWeight: "800", color: "#E6EDF3", marginBottom: 6 }}>
-          Choose a template
-        </Text>
-        <Text style={{ fontSize: 14, color: "#8B949E", marginBottom: 28 }}>
-          You can switch anytime — your source code stays the same
+        <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>SELECT TEMPLATE</Text>
+        <Text style={{ fontSize: 26, fontWeight: "900", color: "#FFFFFF", marginBottom: 6 }}>Choose Layout</Text>
+        <Text style={{ fontSize: 13, color: "#8E8E93", marginBottom: 28 }}>
+          You can switch anytime — your source stays the same
         </Text>
 
-        <View style={{ gap: 14 }}>
+        <View style={{ marginBottom: 32 }}>
           {TEMPLATES.map((t) => (
-            <Pressable
+            <TouchableOpacity
               key={t.id}
               onPress={() => setSelected(t.id)}
+              activeOpacity={0.7}
               style={{
-                backgroundColor: selected === t.id ? "#1F3A5F" : "#161B22",
-                borderRadius: 14, borderWidth: 1.5,
-                borderColor: selected === t.id ? "#58A6FF" : "#30363D",
-                padding: 16, flexDirection: "row", alignItems: "center", gap: 14,
+                backgroundColor: selected === t.id ? "#1A1A1A" : "#121212",
+                borderRadius: 8, borderWidth: 1.5,
+                borderColor: selected === t.id ? "#00F0FF" : "#1F1F1F",
+                padding: 16, flexDirection: "row", alignItems: "center",
+                marginBottom: 12,
               }}
             >
-              {/* Color swatch */}
-              <View style={{ width: 44, height: 56, borderRadius: 8, backgroundColor: t.accentColor, opacity: 0.85, alignItems: "center", justifyContent: "center" }}>
+              <View style={{
+                width: 44, height: 56, borderRadius: 4,
+                backgroundColor: t.accentColor, opacity: 0.85,
+                alignItems: "center", justifyContent: "center", marginRight: 16,
+              }}>
                 <Text style={{ fontSize: 20 }}>📄</Text>
               </View>
-
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#E6EDF3" }}>{t.name}</Text>
-                  <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: "#1C2128" }}>
-                    <Text style={{ fontSize: 10, fontWeight: "600", color: STYLE_COLORS[t.style] ?? "#8B949E" }}>{t.style}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "800", color: "#FFFFFF", marginRight: 8 }}>{t.name}</Text>
+                  <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#2A2A2A" }}>
+                    <Text style={{ fontSize: 9, fontWeight: "800", color: "#8E8E93", letterSpacing: 1 }}>{t.style.toUpperCase()}</Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 12, color: "#8B949E", lineHeight: 18 }}>{t.description}</Text>
+                <Text style={{ fontSize: 12, color: "#8E8E93", lineHeight: 18 }}>{t.description}</Text>
               </View>
-
               {selected === t.id && (
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#58A6FF", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ color: "#0D1117", fontSize: 12, fontWeight: "800" }}>✓</Text>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#00F0FF", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: "#000", fontSize: 12, fontWeight: "900" }}>✓</Text>
                 </View>
               )}
-            </Pressable>
+            </TouchableOpacity>
           ))}
         </View>
 
-        <Pressable
+        <TouchableOpacity
           onPress={handleCreate}
-          style={({ pressed }) => ({
-            backgroundColor: pressed ? "#79B8FF" : "#58A6FF",
-            borderRadius: 12, paddingVertical: 16, alignItems: "center", marginTop: 32,
-          })}
+          activeOpacity={0.8}
+          style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingVertical: 16, alignItems: "center" }}
         >
-          <Text style={{ color: "#0D1117", fontWeight: "800", fontSize: 16 }}>
-            Create Resume →
+          <Text style={{ color: "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
+            CREATE RESUME →
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

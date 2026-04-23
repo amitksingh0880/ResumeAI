@@ -47,69 +47,69 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0D1117" }}>
-      <View style={{ flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#30363D" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderColor: "#1F1F1F" }}>
         <Pressable onPress={() => router.back()} style={{ marginRight: 12 }}>
-          <Text style={{ color: "#58A6FF", fontSize: 14 }}>← Back</Text>
+          <Text style={{ color: "#00F0FF", fontSize: 14 }}>← Back</Text>
         </Pressable>
-        <Text style={{ fontSize: 18, fontWeight: "700", color: "#E6EDF3" }}>⚙️ Settings</Text>
+        <View>
+          <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>CONFIG</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: "#FFFFFF" }}>Settings</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, gap: 20 }}>
         {/* API Key */}
-        <View style={{ backgroundColor: "#161B22", borderRadius: 14, borderWidth: 1, borderColor: "#30363D", padding: 16 }}>
-          <Text style={{ color: "#E6EDF3", fontWeight: "700", fontSize: 15, marginBottom: 4 }}>
-            🤖 Gemini API Key
-          </Text>
-          <Text style={{ color: "#8B949E", fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
-            Required for AI skill insertion, job matching, and resume conversion.
-            Get a free key at{" "}
-            <Text style={{ color: "#58A6FF" }}>aistudio.google.com</Text>
+        <View style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16 }}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13, marginBottom: 4, letterSpacing: 0.5 }}>GEMINI API KEY</Text>
+          <Text style={{ color: "#8E8E93", fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
+            Required for AI features. Get a free key at{" "}
+            <Text style={{ color: "#00F0FF" }}>aistudio.google.com</Text>
           </Text>
           <TextInput
             value={apiKey}
             onChangeText={setApiKey}
             placeholder="AIza…"
-            placeholderTextColor="#6E7681"
+            placeholderTextColor="#333"
             secureTextEntry
             style={{
-              backgroundColor: "#0D1117", borderRadius: 10, borderWidth: 1,
-              borderColor: "#30363D", padding: 12, color: "#E6EDF3",
-              fontSize: 13, fontFamily: "Courier", marginBottom: 12,
+              backgroundColor: "#0A0A0A", borderRadius: 4, borderWidth: 1,
+              borderColor: "#1F1F1F", padding: 12, color: "#FFFFFF",
+              fontSize: 13, marginBottom: 12,
             }}
           />
           <Pressable
             onPress={handleSaveKey}
             style={{
-              backgroundColor: saved ? "#3FB950" : "#58A6FF",
-              borderRadius: 10, paddingVertical: 12, alignItems: "center",
+              backgroundColor: saved ? "#34C759" : "#00F0FF",
+              borderRadius: 4, paddingVertical: 12, alignItems: "center",
             }}
           >
-            <Text style={{ color: "#0D1117", fontWeight: "800", fontSize: 14 }}>
-              {saved ? "✓ Saved!" : "Save API Key"}
+            <Text style={{ color: "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 1 }}>
+              {saved ? "SAVED ✓" : "SAVE API KEY"}
             </Text>
           </Pressable>
         </View>
 
         {/* About */}
-        <View style={{ backgroundColor: "#161B22", borderRadius: 14, borderWidth: 1, borderColor: "#30363D", padding: 16 }}>
-          <Text style={{ color: "#E6EDF3", fontWeight: "700", fontSize: 15, marginBottom: 10 }}>ℹ️ About</Text>
+        <View style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16 }}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13, marginBottom: 12, letterSpacing: 0.5 }}>ABOUT</Text>
           {[
-            ["App", "ResumeAI — Overleaf-Style Resume Builder"],
+            ["App", "ResumeAI Pro"],
             ["Version", "1.0.0"],
-            ["Storage", "Local device only (AsyncStorage)"],
-            ["AI Engine", "Google Gemini 1.5 Flash (free tier)"],
+            ["Storage", "Local (AsyncStorage)"],
+            ["AI Engine", "Google Gemini 1.5 Flash"],
           ].map(([label, value]) => (
-            <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#21262D" }}>
-              <Text style={{ color: "#8B949E", fontSize: 13 }}>{label}</Text>
-              <Text style={{ color: "#C9D1D9", fontSize: 13, flex: 1, textAlign: "right" }}>{value}</Text>
+            <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderColor: "#1F1F1F" }}>
+              <Text style={{ color: "#8E8E93", fontSize: 12 }}>{label}</Text>
+              <Text style={{ color: "#FFFFFF", fontSize: 12, flex: 1, textAlign: "right" }}>{value}</Text>
             </View>
           ))}
         </View>
 
         {/* DSL Reference */}
-        <View style={{ backgroundColor: "#161B22", borderRadius: 14, borderWidth: 1, borderColor: "#30363D", padding: 16 }}>
-          <Text style={{ color: "#E6EDF3", fontWeight: "700", fontSize: 15, marginBottom: 10 }}>📖 DSL Reference</Text>
+        <View style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16 }}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13, marginBottom: 12, letterSpacing: 0.5 }}>DSL REFERENCE</Text>
           {[
             ["\\name{}", "Your full name"],
             ["\\role{}", "Your job title"],
@@ -122,18 +122,18 @@ export default function SettingsScreen() {
             ["\\degree{}{school}{year}", "Education"],
             ["\\cert{}{issuer}{year}", "Certification"],
           ].map(([cmd, desc]) => (
-            <View key={cmd} style={{ flexDirection: "row", gap: 12, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#21262D" }}>
-              <Text style={{ color: "#58A6FF", fontSize: 11, fontFamily: "Courier", minWidth: 160 }}>{cmd}</Text>
-              <Text style={{ color: "#8B949E", fontSize: 11, flex: 1 }}>{desc}</Text>
+            <View key={cmd} style={{ flexDirection: "row", gap: 12, paddingVertical: 6, borderBottomWidth: 1, borderColor: "#1F1F1F" }}>
+              <Text style={{ color: "#00F0FF", fontSize: 11, minWidth: 160 }}>{cmd}</Text>
+              <Text style={{ color: "#8E8E93", fontSize: 11, flex: 1 }}>{desc}</Text>
             </View>
           ))}
         </View>
 
         {/* Danger Zone */}
-        <View style={{ backgroundColor: "#1A0A0A", borderRadius: 14, borderWidth: 1, borderColor: "#F85149", padding: 16 }}>
-          <Text style={{ color: "#F85149", fontWeight: "700", fontSize: 15, marginBottom: 8 }}>⚠️ Danger Zone</Text>
-          <Pressable onPress={handleReset} style={{ backgroundColor: "#3A1A1A", borderRadius: 10, paddingVertical: 12, alignItems: "center", borderWidth: 1, borderColor: "#F85149" }}>
-            <Text style={{ color: "#F85149", fontWeight: "700", fontSize: 14 }}>Reset All Data</Text>
+        <View style={{ backgroundColor: "#120000", borderRadius: 8, borderWidth: 1, borderColor: "#FF3B30", padding: 16 }}>
+          <Text style={{ color: "#FF3B30", fontWeight: "800", fontSize: 13, marginBottom: 8, letterSpacing: 0.5 }}>DANGER ZONE</Text>
+          <Pressable onPress={handleReset} style={{ backgroundColor: "#1A0000", borderRadius: 4, paddingVertical: 12, alignItems: "center", borderWidth: 1, borderColor: "#FF3B30" }}>
+            <Text style={{ color: "#FF3B30", fontWeight: "900", fontSize: 13, letterSpacing: 1 }}>RESET ALL DATA</Text>
           </Pressable>
         </View>
       </ScrollView>

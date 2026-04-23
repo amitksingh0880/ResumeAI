@@ -1,5 +1,14 @@
 import React from "react";
-import { Pressable, Text, ActivityIndicator, StyleSheet, ViewStyle, TextStyle, View } from "react-native";
+import {
+  Pressable,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  View,
+  Platform,
+} from "react-native";
 
 interface ButtonProps {
   onPress?: () => void;
@@ -24,65 +33,50 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   icon,
 }) => {
-  const getVariantStyles = () => {
-    switch (variant) {
-      case "primary":
-        return { backgroundColor: "#00F0FF", borderColor: "#00F0FF" };
-      case "secondary":
-        return { backgroundColor: "#FFFFFF", borderColor: "#FFFFFF" };
-      case "outline":
-        return { backgroundColor: "transparent", borderColor: "#1F1F1F", borderWidth: 1 };
-      case "ghost":
-        return { backgroundColor: "transparent", borderColor: "transparent" };
-      case "ai":
-        return { backgroundColor: "#8B5CF6", borderColor: "#8B5CF6" };
-      default:
-        return { backgroundColor: "#00F0FF", borderColor: "#00F0FF" };
-    }
-  };
+  const bg = {
+    primary:   { bg: "#00F0FF", border: "#00F0FF", text: "#000000" },
+    secondary: { bg: "#FFFFFF", border: "#FFFFFF",  text: "#000000" },
+    outline:   { bg: "transparent", border: "#1F1F1F", text: "#FFFFFF" },
+    ghost:     { bg: "transparent", border: "transparent", text: "#00F0FF" },
+    ai:        { bg: "#8B5CF6", border: "#8B5CF6", text: "#FFFFFF" },
+  }[variant];
 
-  const getTextColor = () => {
-    if (disabled) return "#444444";
-    switch (variant) {
-      case "primary": return "#000000";
-      case "secondary": return "#000000";
-      case "outline": return "#FFFFFF";
-      case "ghost": return "#00F0FF";
-      case "ai": return "#FFFFFF";
-      default: return "#000000";
-    }
-  };
+  const pad = {
+    sm:  { paddingVertical: 6,  paddingHorizontal: 12 },
+    md:  { paddingVertical: 12, paddingHorizontal: 20 },
+    lg:  { paddingVertical: 16, paddingHorizontal: 24 },
+  }[size];
 
-  const getSizeStyles = () => {
-    switch (size) {
-      case "sm": return { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 };
-      case "md": return { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 4 };
-      case "lg": return { paddingVertical: 16, paddingHorizontal: 24, borderRadius: 4 };
-      default: return { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 4 };
-    }
-  };
+  // On web, use onClick in addition to onPress for reliability
+  const webProps = Platform.OS === "web" ? { onClick: onPress } : {};
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      {...webProps}
       style={({ pressed }) => [
         styles.base,
-        getVariantStyles(),
-        getSizeStyles(),
-        pressed && { opacity: 0.9 },
-        disabled && { backgroundColor: "#1A1A1A", borderColor: "#1A1A1A" },
+        pad,
+        {
+          backgroundColor: disabled ? "#1A1A1A" : bg.bg,
+          borderColor: disabled ? "#1A1A1A" : bg.border,
+          opacity: pressed ? 0.85 : 1,
+        },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={getTextColor()} size="small" />
+        <ActivityIndicator color={bg.text} size="small" />
       ) : (
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {icon && <View style={{ marginRight: 8 }}>{icon}</View>}
-          <Text style={[styles.text, { color: getTextColor() }, textStyle]}>
-            {title.toUpperCase()}
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          {icon}
+          {title ? (
+            <Text style={[styles.text, { color: disabled ? "#444" : bg.text }, textStyle]}>
+              {title}
+            </Text>
+          ) : null}
         </View>
       )}
     </Pressable>
@@ -93,12 +87,15 @@ const styles = StyleSheet.create({
   base: {
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 4,
     borderWidth: 1,
+    // Web: ensure the button is always clickable
+    ...(Platform.OS === "web" ? { cursor: "pointer" } as any : {}),
   },
   text: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "800",
     letterSpacing: 1,
-    fontFamily: "Inter", // Or JetBrains Mono if available
+    textTransform: "uppercase",
   },
 });
