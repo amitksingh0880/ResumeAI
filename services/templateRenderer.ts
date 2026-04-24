@@ -6,29 +6,76 @@ const BASE_CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { -webkit-print-color-adjust: exact; }
   a { text-decoration: none; color: inherit; }
+  @page { margin: 0; }
+  @media print {
+    body { margin: 0; padding: 0; }
+    .no-print { display: none !important; }
+  }
+`;
+
+const INJECTED_JS = `
+<script>
+  (function() {
+    let btn = document.createElement('button');
+    btn.className = 'no-print';
+    btn.innerText = '🔗 LINK';
+    btn.style.cssText = 'position:absolute; display:none; background:#00F0FF; color:black; border:none; padding:6px 12px; border-radius:4px; font-size:10px; font-weight:900; cursor:pointer; z-index:9999; font-family:sans-serif; box-shadow:0 4px 15px rgba(0,240,255,0.4); letter-spacing:1px;';
+    document.body.appendChild(btn);
+
+    document.addEventListener('mouseup', () => {
+      let sel = window.getSelection();
+      let text = sel.toString().trim();
+      if (text && text.length > 1) {
+        let range = sel.getRangeAt(0);
+        let rect = range.getBoundingClientRect();
+        btn.style.left = (rect.left + window.pageXOffset + (rect.width / 2) - 30) + 'px';
+        btn.style.top = (rect.top + window.pageYOffset - 35) + 'px';
+        btn.style.display = 'block';
+        btn.onmousedown = (e) => e.preventDefault(); // prevent losing selection
+        btn.onclick = () => {
+          let url = prompt('Enter URL for "' + text + '":', 'https://');
+          if (url) {
+            window.parent.postMessage({ type: 'MAKE_LINK', text: text, url: url }, '*');
+          }
+          btn.style.display = 'none';
+          sel.removeAllRanges();
+        };
+      } else {
+        btn.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('mousedown', () => {
+      if (btn.style.display === 'block') {
+        // give small delay so click can register if it was on the button
+        setTimeout(() => { if (!window.getSelection().toString().trim()) btn.style.display = 'none'; }, 100);
+      }
+    });
+  })();
+</script>
 `;
 
 function formatText(str: string): string {
+  const linkIcon = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px; opacity: 0.5; display: inline-block; vertical-align: middle;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+  
   return str
-    .replace(/🔗/g, "")
-    .replace(/\\link{([^}]+)}{([^}]+)}/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: rgba(0,0,0,0.2); font-weight: 500;">$2</a>')
-    .replace(/\\textbf{([^}]+)}/g, "<strong>$1</strong>")
+    .replace(/🔗/g, linkIcon) // Replace existing emoji with a clean SVG
+    .replace(/\\link\s*{([^}]+)}\s*{([^}]+)}/g, `<a href="$1" target="_blank" style="color: #007AFF; text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 2px; font-weight: 500;">$2${linkIcon}</a>`)
+    .replace(/\\textbf\s*{([^}]+)}/g, "<strong>$1</strong>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 }
 
 function renderContact(ast: ResumeAST, separator = " | "): string {
-  // Extract structured contact info from unstructured multiline string
   const rawContact = ast.contact.raw.join("  ");
+  const contactItems: string[] = [];
   
+  // 1. Extract structured "Key: value" contacts
   const phoneMatch = rawContact.match(/Phone:\s*(\+?[\d\s\-().]+)/i);
   const emailMatch = rawContact.match(/Email:\s*([^\s]+@[^\s]+)/i);
-  const linkMatch = rawContact.match(/LinkedIn:\s*([^\s]+)/i);
-  const gitMatch = rawContact.match(/GitHub:\s*([^\s]+)/i);
-  const addrMatch = rawContact.match(/Address:\s*(.*?)(?=\s*(Phone|Email|LinkedIn|GitHub|Website):|$)/i);
+  // Match "LinkedIn: url" but NOT if it's inside a \link command
+  const linkedinMatch = rawContact.match(/LinkedIn:\s*(?!\\link)([^\s]+)/i);
+  const githubMatch = rawContact.match(/GitHub:\s*(?!\\link)([^\s]+)/i);
 
-  const contactItems: string[] = [];
-  const address = addrMatch ? addrMatch[1].trim() : (ast.contact.location || "");
-  
   if (phoneMatch) {
     const p = phoneMatch[1].trim();
     contactItems.push(`<span><a href="tel:${p}">${p}</a></span>`);
@@ -37,17 +84,31 @@ function renderContact(ast: ResumeAST, separator = " | "): string {
     const e = emailMatch[1].trim();
     contactItems.push(`<span><a href="mailto:${e}">${e}</a></span>`);
   }
-  if (linkMatch) {
-    const l = linkMatch[1].trim();
+  if (linkedinMatch) {
+    const l = linkedinMatch[1].trim();
     const url = l.startsWith("http") ? l : `https://${l}`;
     contactItems.push(`<span><a href="${url}" target="_blank">${l}</a></span>`);
   }
-  if (gitMatch) {
-    const g = gitMatch[1].trim();
+  if (githubMatch) {
+    const g = githubMatch[1].trim();
     const url = g.startsWith("http") ? g : `https://${g}`;
     contactItems.push(`<span><a href="${url}" target="_blank">${g}</a></span>`);
   }
 
+  // 2. Extract \link{url}{label} commands from contact (handles DSL-style links)
+  const linkCmdRegex = /\\link\s*{([^}]+)}\s*{([^}]+)}/g;
+  let m;
+  while ((m = linkCmdRegex.exec(rawContact)) !== null) {
+    const url = m[1].trim();
+    const label = m[2].trim();
+    // Avoid duplicating if we already matched this as a structured contact
+    const alreadyHas = contactItems.some(ci => ci.includes(url) || ci.includes(label));
+    if (!alreadyHas) {
+      contactItems.push(`<span><a href="${url}" target="_blank">${label}</a></span>`);
+    }
+  }
+
+  // 3. Fallback: if no structured contacts found, run formatText on the raw strings
   if (contactItems.length === 0 && ast.contact.raw.length > 0) {
     return ast.contact.raw.map(c => `<span>${formatText(c)}</span>`).join(separator);
   }
@@ -376,31 +437,31 @@ export function renderEliteLaTeX(ast: ResumeAST): string {
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;600&display=swap');
     
-    body { font-family: 'Libre Baskerville', serif; font-size: 9.5pt; color: #111; background: #fff; max-width: 820px; margin: 0 auto; padding: 40px 50px; line-height: 1.35; }
+    body { font-family: 'Libre Baskerville', serif; font-size: 9.5pt; color: #111; background: #fff; max-width: 820px; margin: 0 auto; padding: 0.3in 0.4in; line-height: 1.3; }
     
-    .header { text-align: center; margin-bottom: 15px; }
-    .header h1 { font-size: 26pt; font-weight: 700; margin-bottom: 2px; letter-spacing: 0.5px; font-variant: small-caps; }
-    .header .location { font-size: 10pt; margin-bottom: 6px; }
-    .header .contact { font-size: 8.5pt; display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; font-family: 'Source Sans 3', sans-serif; }
+    .header { text-align: center; margin-bottom: 8px; }
+    .header h1 { font-size: 24pt; font-weight: 700; margin-bottom: 0px; letter-spacing: 0.5px; font-variant: small-caps; }
+    .header .location { font-size: 9.5pt; margin-bottom: 4px; }
+    .header .contact { font-size: 8.5pt; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; font-family: 'Source Sans 3', sans-serif; }
     .header .contact span { display: flex; align-items: center; gap: 4px; }
     
-    .section-title { font-size: 13pt; font-weight: 700; border-bottom: 1px solid #222; margin: 16px 0 8px; padding-bottom: 3px; letter-spacing: 0.5px; }
+    .section-title { font-size: 12pt; font-weight: 700; border-bottom: 1px solid #222; margin: 12px 0 6px; padding-bottom: 2px; letter-spacing: 0.5px; }
     
-    .entry { margin-bottom: 10px; }
-    .entry-main { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
-    .entry-title { font-weight: 700; font-size: 10.5pt; }
-    .entry-date { font-weight: 700; font-size: 9.5pt; white-space: nowrap; }
+    .entry { margin-bottom: 6px; }
+    .entry-main { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1px; }
+    .entry-title { font-weight: 700; font-size: 10pt; }
+    .entry-date { font-weight: 700; font-size: 9pt; white-space: nowrap; }
     
-    .entry-sub { display: flex; justify-content: space-between; font-style: italic; font-size: 9.5pt; color: #222; margin-bottom: 4px; font-family: 'Source Sans 3', sans-serif; }
+    .entry-sub { display: flex; justify-content: space-between; font-style: italic; font-size: 9pt; color: #222; margin-bottom: 2px; font-family: 'Source Sans 3', sans-serif; }
     
-    ul { margin-left: 20px; margin-top: 2px; list-style-type: disc; }
-    li { margin-bottom: 3px; font-size: 9.5pt; font-family: 'Source Sans 3', sans-serif; text-align: justify; line-height: 1.4; }
+    ul { margin-left: 18px; margin-top: 1px; list-style-type: disc; }
+    li { margin-bottom: 2px; font-size: 9pt; font-family: 'Source Sans 3', sans-serif; text-align: justify; line-height: 1.35; }
     
-    .skills-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-    .skills-table td { padding: 3px 0; vertical-align: top; font-size: 9.5pt; font-family: 'Source Sans 3', sans-serif; }
-    .skills-cat { font-weight: 700; width: 180px; }
+    .skills-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+    .skills-table td { padding: 2px 0; vertical-align: top; font-size: 9pt; font-family: 'Source Sans 3', sans-serif; }
+    .skills-cat { font-weight: 700; width: 160px; }
     
-    .summary { font-size: 9.5pt; font-family: 'Source Sans 3', sans-serif; text-align: justify; margin-bottom: 10px; line-height: 1.5; }
+    .summary { font-size: 9pt; font-family: 'Source Sans 3', sans-serif; text-align: justify; margin-bottom: 8px; line-height: 1.4; }
     
     b, strong { font-weight: 700; color: #000; }
   `;
@@ -548,5 +609,6 @@ export function renderTemplate(id: string, ast: ResumeAST, customCSS?: string): 
     const base = id === "elite-latex" ? renderEliteLaTeX(ast) : renderClassicPDF(ast);
     return base.replace("</style>", `${customCSS}</style>`);
   }
-  return getTemplate(id).render(ast);
+  const html = getTemplate(id).render(ast);
+  return html.replace("</body>", `${INJECTED_JS}</body>`);
 }
