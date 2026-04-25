@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import {
   getApiKey,
   getDocumentById,
   updateDocumentSource,
+  getSettings,
 } from "@/services/storageService";
 import {
   LucideChevronLeft,
@@ -22,12 +23,11 @@ import {
   LucideCheckCircle2,
   LucideAlertTriangle,
   LucideArrowRight,
+  LucideZap,
+  LucideHistory
 } from "lucide-react-native";
-
 import { Theme, type AppTheme } from "@/constants/Theme";
-import { getSettings } from "@/services/storageService";
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
 
 export default function GrammarScreen() {
   const [loading, setLoading] = useState(false);
@@ -79,19 +79,15 @@ export default function GrammarScreen() {
   }
 
   const scoreColor = result
-    ? result.score >= 85
-      ? theme.success
-      : result.score >= 60
-      ? theme.warning
-      : theme.danger
+    ? result.score >= 85 ? theme.success : result.score >= 60 ? theme.warning : theme.danger
     : theme.textMuted;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Header */}
-      <View style={{
-        flexDirection: "row", alignItems: "center", padding: 16,
-        borderBottomWidth: 1, borderColor: theme.border
+      <View style={{ 
+        flexDirection: "row", alignItems: "center", padding: 16, height: 64,
+        borderBottomWidth: 1, borderColor: theme.border, backgroundColor: theme.background 
       }}>
         <TouchableOpacity 
           onPress={() => {
@@ -102,57 +98,30 @@ export default function GrammarScreen() {
             }
           }} 
           activeOpacity={0.7} 
-          style={{ marginRight: 16 }}
+          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: theme.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.border, marginRight: 16 }}
         >
-          <LucideChevronLeft color={theme.accent} size={24} />
+          <LucideChevronLeft color={theme.accent} size={20} />
         </TouchableOpacity>
-        <View>
-          <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>STUDIO ANALYSIS</Text>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: theme.textPrimary }}>Grammar & Power Verbs</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>STUDIO INTELLIGENCE</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: theme.textPrimary, letterSpacing: -0.5 }}>Grammar & Tone</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        {/* Analyze Button */}
-        {!result && (
-          <>
-            <View style={{
-              backgroundColor: theme.success + "15", borderRadius: 8,
-              borderWidth: 1, borderColor: theme.success + "33", padding: 20,
-              marginBottom: 24, alignItems: "center",
-            }}>
-              <Text style={{ fontSize: 40, marginBottom: 12 }}>🔍</Text>
-              <Text style={{ color: theme.textPrimary, fontSize: 14, fontWeight: "800", textAlign: "center", marginBottom: 8 }}>
-                AI Writing Coach
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {!result ? (
+          <View style={{ gap: 24, paddingTop: 40 }}>
+            <View style={{ alignItems: "center", gap: 16 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: theme.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.border }}>
+                <LucideZap color={theme.accent} size={32} />
+              </View>
+              <Text style={{ color: theme.textPrimary, fontSize: 20, fontWeight: "900", textAlign: "center" }}>Power Verb Optimizer</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: "center", lineHeight: 22, maxWidth: "80%" }}>
+                Our neural engine will scan your resume for passive voice and weak phrasing, replacing them with high-impact power verbs.
               </Text>
-              <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 20, textAlign: "center" }}>
-                Scans your resume for weak verbs, passive voice, and vague language. Replaces them with powerful, ATS-optimized alternatives.
-              </Text>
-            </View>
-
-            <View style={{
-              backgroundColor: theme.card, borderRadius: 8, borderWidth: 1,
-              borderColor: theme.border, padding: 16, marginBottom: 24,
-            }}>
-              <Text style={{ color: theme.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1, marginBottom: 12 }}>
-                WHAT IT FIXES
-              </Text>
-              {[
-                { bad: '"Worked on backend APIs"', good: '"Engineered scalable backend APIs"', icon: "💪" },
-                { bad: '"Responsible for testing"', good: '"Spearheaded QA automation"', icon: "🎯" },
-                { bad: '"Helped with deployment"', good: '"Orchestrated CI/CD pipelines"', icon: "🚀" },
-              ].map((ex, i) => (
-                <View key={i} style={{ marginBottom: i < 2 ? 14 : 0 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <Text style={{ fontSize: 14 }}>{ex.icon}</Text>
-                    <Text style={{ color: theme.danger, fontSize: 11, fontWeight: "600", textDecorationLine: "line-through" }}>{ex.bad}</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 22 }}>
-                    <LucideArrowRight color={theme.success} size={12} />
-                    <Text style={{ color: theme.success, fontSize: 11, fontWeight: "700" }}>{ex.good}</Text>
-                  </View>
-                </View>
-              ))}
             </View>
 
             <TouchableOpacity
@@ -160,118 +129,77 @@ export default function GrammarScreen() {
               disabled={loading}
               activeOpacity={0.8}
               style={{
-                backgroundColor: theme.accent, borderRadius: 6, paddingVertical: 16,
-                alignItems: "center", flexDirection: "row", justifyContent: "center",
-                gap: 10, opacity: loading ? 0.7 : 1,
+                backgroundColor: theme.accent, borderRadius: 16, height: 56,
+                alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
+                opacity: loading ? 0.5 : 1,
+                shadowColor: theme.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8
               }}
             >
-              {loading ? (
+              {loading ? <ActivityIndicator color="#FFF" /> : (
                 <>
-                  <ActivityIndicator color="#000" />
-                  <Text style={{ color: "#000", fontWeight: "800", fontSize: 12 }}>ANALYZING...</Text>
-                </>
-              ) : (
-                <>
-                  <LucideSparkles color="#000" size={18} />
-                  <Text style={{ color: "#000", fontWeight: "900", fontSize: 12, letterSpacing: 1.5 }}>
-                    ANALYZE MY RESUME
-                  </Text>
+                  <LucideSparkles color="#FFF" size={20} />
+                  <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 15, letterSpacing: 1 }}>INITIALIZE SCAN</Text>
                 </>
               )}
             </TouchableOpacity>
-          </>
-        )}
-
-        {/* Results */}
-        {result && (
+          </View>
+        ) : (
           <View style={{ gap: 20 }}>
-            {/* Score */}
-            <View style={{
-              backgroundColor: theme.card, borderRadius: 8, borderWidth: 1,
-              borderColor: theme.border, padding: 24, alignItems: "center",
-            }}>
-              <View style={{
-                width: 100, height: 100, borderRadius: 50,
-                borderWidth: 8, borderColor: theme.surface,
-                borderTopColor: scoreColor, borderRightColor: scoreColor,
-                alignItems: "center", justifyContent: "center", marginBottom: 12,
-              }}>
-                <Text style={{ fontSize: 32, fontWeight: "900", color: theme.textPrimary }}>{result.score}</Text>
-                <Text style={{ fontSize: 8, fontWeight: "800", color: scoreColor }}>WRITING SCORE</Text>
+            {/* Score Card */}
+            <View style={{ backgroundColor: theme.card, borderRadius: 20, borderWidth: 1, borderColor: theme.border, padding: 24, alignItems: "center" }}>
+              <View style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 8, borderColor: scoreColor + "22", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                <Text style={{ color: scoreColor, fontSize: 32, fontWeight: "900" }}>{result.score}</Text>
               </View>
-              <Text style={{ color: theme.textSecondary, fontSize: 11, textAlign: "center" }}>
-                {result.score >= 85
-                  ? "Excellent! Your resume uses strong action verbs."
-                  : result.score >= 60
-                  ? "Good, but some bullets could use more impact."
-                  : "Needs improvement — several weak verbs detected."}
+              <Text style={{ color: theme.textPrimary, fontSize: 18, fontWeight: "800", textAlign: "center" }}>Impact Score</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: "center", marginTop: 8, lineHeight: 20 }}>
+                Found {result.changes.length} optimization opportunities to increase professional authority.
               </Text>
             </View>
 
-            {/* Changes */}
-            {result.changes.length > 0 && (
-              <View>
-                <Text style={{ color: theme.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 12 }}>
-                  SUGGESTED IMPROVEMENTS ({result.changes.length})
-                </Text>
-                {result.changes.map((c, i) => (
-                  <View key={i} style={{
-                    backgroundColor: theme.card, borderRadius: 6, borderWidth: 1,
-                    borderColor: theme.border, padding: 14, marginBottom: 8,
-                  }}>
-                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
-                      <LucideAlertTriangle color={theme.warning} size={14} style={{ marginTop: 2 }} />
-                      <Text style={{ color: theme.danger, fontSize: 12, flex: 1, textDecorationLine: "line-through" }}>
-                        {c.original}
-                      </Text>
+            {/* Changes List */}
+            <View style={{ gap: 12 }}>
+              <Text style={{ color: theme.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1.5, marginBottom: 4 }}>PROPOSED IMPROVEMENTS</Text>
+              {result.changes.map((c, i) => (
+                <View key={i} style={{ backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.border, padding: 16 }}>
+                  <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.danger, fontSize: 12, fontWeight: "700", textDecorationLine: "line-through", marginBottom: 4 }}>{c.original}</Text>
+                      <Text style={{ color: theme.success, fontSize: 13, fontWeight: "800" }}>{c.improved}</Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
-                      <LucideCheckCircle2 color={theme.accent} size={14} style={{ marginTop: 2 }} />
-                      <Text style={{ color: theme.accent, fontSize: 12, fontWeight: "600", flex: 1 }}>
-                        {c.improved}
-                      </Text>
-                    </View>
-                    <Text style={{ color: theme.textMuted, fontSize: 10, marginLeft: 22, fontStyle: "italic" }}>
-                      {c.reason}
-                    </Text>
+                    <LucideArrowRight color={theme.textMuted} size={16} style={{ marginTop: 10 }} />
                   </View>
-                ))}
-              </View>
-            )}
-
-            {/* Apply Button */}
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <TouchableOpacity
-                onPress={() => { setResult(null); }}
-                activeOpacity={0.7}
-                style={{
-                  flex: 1, paddingVertical: 14, borderRadius: 6,
-                  borderWidth: 1, borderColor: theme.border, alignItems: "center",
-                }}
-              >
-                <Text style={{ color: theme.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>
-                  ↺ RE-ANALYZE
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleApply}
-                disabled={applied || result.changes.length === 0}
-                activeOpacity={0.8}
-                style={{
-                  flex: 1, paddingVertical: 14, borderRadius: 6,
-                  backgroundColor: applied ? theme.surface : theme.accent,
-                  alignItems: "center",
-                  opacity: applied || result.changes.length === 0 ? 0.5 : 1,
-                }}
-              >
-                <Text style={{
-                  color: applied ? theme.accent : "#000",
-                  fontSize: 10, fontWeight: "900", letterSpacing: 1,
-                }}>
-                  {applied ? "✓ APPLIED" : "APPLY ALL FIXES"}
-                </Text>
-              </TouchableOpacity>
+                  <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 10 }} />
+                  <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                    <LucideHistory color={theme.accent} size={12} />
+                    <Text style={{ color: theme.textSecondary, fontSize: 11, fontStyle: "italic" }}>{c.reason}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
+
+            <TouchableOpacity
+              onPress={handleApply}
+              disabled={applied}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: applied ? theme.success : theme.accent, borderRadius: 16, height: 56,
+                alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
+                opacity: applied ? 0.7 : 1,
+                shadowColor: applied ? theme.success : theme.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8
+              }}
+            >
+              {applied ? <LucideCheckCircle2 color="#FFF" size={20} /> : <LucideSparkles color="#FFF" size={20} />}
+              <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 15, letterSpacing: 1 }}>
+                {applied ? "OPTIMIZATIONS APPLIED" : "COMMIT ALL CHANGES"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setResult(null)}
+              style={{ height: 56, borderRadius: 16, borderWidth: 1, borderColor: theme.border, alignItems: "center", justifyContent: "center" }}
+            >
+              <Text style={{ color: theme.textPrimary, fontWeight: "800" }}>RE-SCAN REPOSITORY</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

@@ -160,7 +160,7 @@ export default function SettingsScreen() {
         >
           <LucideChevronLeft color={colors.accent} size={20} />
         </TouchableOpacity>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={{ color: colors.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>STUDIO CONFIG</Text>
           <Text style={{ fontSize: 18, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.5 }}>System Settings</Text>
         </View>

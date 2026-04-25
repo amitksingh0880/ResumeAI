@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,15 +13,13 @@ import {
   getActiveDocumentId,
   getDocumentById,
   getApiKey,
+  getSettings,
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
 import { generateCareerRoadmap, type CareerStep } from "@/services/aiService";
-import { LucideCheckCircle2 } from "lucide-react-native";
-
+import { LucideCheckCircle2, LucideChevronLeft, LucideCompass, LucideMap, LucideFlag } from "lucide-react-native";
 import { Theme, type AppTheme } from "@/constants/Theme";
-import { getSettings } from "@/services/storageService";
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
 
 export default function RoadmapScreen() {
   const [loading, setLoading] = useState(false);
@@ -69,7 +67,10 @@ export default function RoadmapScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Header */}
-      <View style={{ flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderColor: theme.border }}>
+      <View style={{ 
+        flexDirection: "row", alignItems: "center", padding: 16, height: 64,
+        borderBottomWidth: 1, borderColor: theme.border, backgroundColor: theme.background 
+      }}>
         <TouchableOpacity 
           onPress={() => {
             if (router.canGoBack()) {
@@ -79,67 +80,85 @@ export default function RoadmapScreen() {
             }
           }} 
           activeOpacity={0.7} 
-          style={{ marginRight: 16 }}
+          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: theme.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.border, marginRight: 16 }}
         >
-          <Text style={{ color: theme.accent, fontSize: 14, fontWeight: "700" }}>← Back</Text>
+          <LucideChevronLeft color={theme.accent} size={20} />
         </TouchableOpacity>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>STUDIO PATH</Text>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: theme.textPrimary }}>Career Roadmap</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: theme.textPrimary, letterSpacing: -0.5 }}>Career Roadmap</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
         {loading ? (
-          <View style={{ alignItems: "center", paddingTop: 100 }}>
-            <ActivityIndicator size="large" color={theme.accent} />
-            <Text style={{ color: theme.textSecondary, marginTop: 16, fontSize: 12, fontWeight: "800", letterSpacing: 1 }}>
-              CALCULATING TRAJECTORY...
-            </Text>
+          <View style={{ alignItems: "center", paddingTop: 100, gap: 20 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: theme.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.border }}>
+              <ActivityIndicator color={theme.accent} />
+            </View>
+            <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 2 }}>CALCULATING TRAJECTORY...</Text>
           </View>
         ) : roadmap ? (
-          <>
-            {/* Market Outlook */}
-            <View style={{ backgroundColor: theme.card, borderRadius: 8, borderWidth: 1, borderColor: theme.border, padding: 20, marginBottom: 28 }}>
-              <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 8 }}>MARKET OUTLOOK</Text>
-              <Text style={{ color: theme.textPrimary, fontSize: 15, fontWeight: "800", marginBottom: 8 }}>Strategic Analysis</Text>
-              <Text style={{ color: theme.textSecondary, fontSize: 13, lineHeight: 20 }}>{roadmap.summary}</Text>
+          <View style={{ gap: 24 }}>
+            {/* Summary Card */}
+            <View style={{ backgroundColor: theme.card, borderRadius: 20, borderWidth: 1, borderColor: theme.border, padding: 24 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: theme.accent + "15", alignItems: "center", justifyContent: "center" }}>
+                  <LucideCompass color={theme.accent} size={24} />
+                </View>
+                <Text style={{ color: theme.textPrimary, fontSize: 18, fontWeight: "900" }}>Strategic Summary</Text>
+              </View>
+              <Text style={{ color: theme.textSecondary, fontSize: 14, lineHeight: 24 }}>{roadmap.summary}</Text>
             </View>
 
-            <Text style={{ color: theme.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 16 }}>EVOLUTIONARY PHASES</Text>
-
-            {roadmap.steps.map((step, i) => (
-              <View key={i} style={{
-                backgroundColor: theme.card, borderRadius: 8, padding: 20,
-                borderWidth: 1, borderColor: i === 0 ? theme.accent : theme.border,
-                marginBottom: 16,
-              }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <View style={{ backgroundColor: i === 0 ? theme.accent + "15" : theme.surface, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: i === 0 ? theme.accent : theme.border }}>
-                    <Text style={{ color: i === 0 ? theme.accent : theme.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>PHASE 0{i + 1}</Text>
+            {/* Steps Timeline */}
+            <View style={{ gap: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <LucideMap color={theme.textMuted} size={16} />
+                <Text style={{ color: theme.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>STEP-BY-STEP EXECUTION</Text>
+              </View>
+              {roadmap.steps.map((step, i) => (
+                <View key={i} style={{ flexDirection: "row", gap: 20 }}>
+                  <View style={{ alignItems: "center" }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: i === 0 ? theme.accent : theme.card, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: i === 0 ? theme.accent : theme.border, zIndex: 1 }}>
+                      {i === 0 ? <LucideCheckCircle2 color="#FFF" size={18} /> : <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "900" }}>{i + 1}</Text>}
+                    </View>
+                    {i < roadmap.steps.length - 1 && (
+                      <View style={{ width: 2, flex: 1, backgroundColor: theme.border, marginVertical: 4 }} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, paddingBottom: 24 }}>
+                    <View style={{ backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.border, padding: 16 }}>
+                      <Text style={{ color: theme.accent, fontSize: 11, fontWeight: "900", letterSpacing: 1, marginBottom: 6 }}>PHASE 0{i + 1}</Text>
+                      <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: "800", marginBottom: 10 }}>{step.role.toUpperCase()}</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 13, lineHeight: 20, marginBottom: 16 }}>{step.description}</Text>
+                      
+                      <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 12 }} />
+                      
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                        {step.skillsNeeded.map((skill, si) => (
+                          <View key={si} style={{ backgroundColor: theme.surface, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: theme.border }}>
+                            <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: "800" }}>{skill}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
                   </View>
                 </View>
-                <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: "800", marginBottom: 6 }}>{step.role.toUpperCase()}</Text>
-                <Text style={{ color: theme.textSecondary, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>{step.description}</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {step.skillsNeeded.map((skill, si) => (
-                    <View key={si} style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.surface, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: theme.border }}>
-                      <LucideCheckCircle2 color={theme.success} size={12} style={{ marginRight: 6 }} />
-                      <Text style={{ color: theme.textPrimary, fontSize: 11, fontWeight: "600" }}>{skill.toUpperCase()}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ))}
+              ))}
+            </View>
 
             <TouchableOpacity
               onPress={handleGenerate}
               activeOpacity={0.7}
-              style={{ paddingVertical: 16, alignItems: "center", marginTop: 8, marginBottom: 40 }}
+              style={{ height: 56, borderRadius: 16, borderWidth: 1, borderColor: theme.border, alignItems: "center", justifyContent: "center", marginBottom: 20 }}
             >
-              <Text style={{ color: theme.accent, fontSize: 13, fontWeight: "800", letterSpacing: 1 }}>✦ RE-CALCULATE PATH</Text>
+              <Text style={{ color: theme.textPrimary, fontWeight: "800" }}>RE-CALCULATE TRAJECTORY</Text>
             </TouchableOpacity>
-          </>
+          </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>

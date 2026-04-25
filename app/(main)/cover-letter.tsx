@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -11,28 +11,25 @@ import {
   View,
   Platform,
 } from "react-native";
-import { generateCoverLetter } from "@/services/aiService";
-import { getActiveDocumentId, getApiKey, getDocumentById } from "@/services/storageService";
-import {
-  LucideChevronLeft,
-  LucideSparkles,
-  LucideCopy,
-  LucideDownload,
-  LucideFileText,
+import * as Clipboard from "expo-clipboard";
+import { 
+  LucideChevronLeft, 
+  LucideCopy, 
+  LucideCheck, 
+  LucideSparkles, 
+  LucideBriefcase, 
+  LucideUser, 
+  LucideSmile, 
+  LucideSend,
   LucideRefreshCw,
-  LucideArrowRight,
-  LucideTarget,
-  LucideRocket,
-  LucideZap,
+  LucideArrowRight
 } from "lucide-react-native";
-
-const TONES = [
-  { id: "professional" as const, label: "PROFESSIONAL", icon: <LucideTarget size={18} />, color: "#007AFF" },
-  { id: "enthusiastic" as const, label: "ENTHUSIASTIC", icon: <LucideRocket size={18} />, color: "#FF6B6B" },
-  { id: "concise" as const, label: "CONCISE", icon: <LucideZap size={18} />, color: "#34C759" },
-];
+import { getDocumentById, getActiveDocumentId, getApiKey, getSettings } from "@/services/storageService";
+import { generateCoverLetter } from "@/services/aiService";
+import { Theme } from "@/constants/Theme";
 
 export default function CoverLetterScreen() {
+  const [doc, setDoc] = useState<any>(null);
   const [jd, setJd] = useState("");
   const [company, setCompany] = useState("");
   const [tone, setTone] = useState<"professional" | "enthusiastic" | "concise">("professional");
@@ -43,6 +40,16 @@ export default function CoverLetterScreen() {
     wordCount: number;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const s = await getSettings();
+      setSettings(s);
+    })();
+  }, []);
+
+  const themeToUse = settings?.appearance === "dark" ? Theme.dark : Theme.light;
 
   async function handleGenerate() {
     if (jd.trim().length < 30) {
@@ -85,11 +92,11 @@ export default function CoverLetterScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeToUse.background }}>
       {/* Header */}
       <View style={{
-        flexDirection: "row", alignItems: "center", padding: 16,
-        borderBottomWidth: 1, borderColor: "#1F1F1F"
+        flexDirection: "row", alignItems: "center", padding: 16, height: 64,
+        borderBottomWidth: 1, borderColor: themeToUse.border, backgroundColor: themeToUse.background
       }}>
         <TouchableOpacity 
           onPress={() => {
@@ -100,106 +107,78 @@ export default function CoverLetterScreen() {
             }
           }} 
           activeOpacity={0.7} 
-          style={{ marginRight: 16 }}
+          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: themeToUse.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: themeToUse.border, marginRight: 16 }}
         >
-          <LucideChevronLeft color="#00F0FF" size={24} />
+          <LucideChevronLeft color={themeToUse.accent} size={20} />
         </TouchableOpacity>
-        <View>
-          <Text style={{ color: "#8B5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>AI GENERATOR</Text>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: "#FFFFFF" }}>Cover Letter</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: themeToUse.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>AI ASSISTANT</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: themeToUse.textPrimary, letterSpacing: -0.5 }}>Cover Letter</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
         {!result ? (
           <>
-            {/* Company Name */}
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 8 }}>
-              COMPANY NAME
-            </Text>
-            <TextInput
-              value={company}
-              onChangeText={setCompany}
-              placeholder="e.g. Google, Amazon, Stripe..."
-              placeholderTextColor="#333"
-              style={{
-                borderRadius: 4, borderWidth: 1, borderColor: "#1F1F1F",
-                backgroundColor: "#121212", padding: 14, color: "#FFFFFF",
-                fontSize: 13, marginBottom: 20,
-              }}
-            />
-
-            {/* Tone Selector */}
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 8 }}>
-              TONE
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
-              {TONES.map(t => (
-                <TouchableOpacity
-                  key={t.id}
-                  onPress={() => setTone(t.id)}
-                  activeOpacity={0.7}
-                  style={{
-                    flex: 1, paddingVertical: 12, paddingHorizontal: 8,
-                    borderRadius: 6, alignItems: "center",
-                    backgroundColor: tone === t.id ? `${t.color}20` : "#121212",
-                    borderWidth: 1,
-                    borderColor: tone === t.id ? t.color : "#1F1F1F",
-                  }}
-                >
-                  <View style={{ marginBottom: 4 }}>
-                    {React.cloneElement(t.icon as any, { color: tone === t.id ? t.color : "#555" })}
-                  </View>
-                  <Text style={{
-                    color: tone === t.id ? t.color : "#555",
-                    fontSize: 8, fontWeight: "900", letterSpacing: 1,
-                  }}>
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Input Section */}
+            <View style={{ backgroundColor: themeToUse.card, borderRadius: 16, borderWidth: 1, borderColor: themeToUse.border, padding: 20, marginBottom: 24 }}>
+              <Text style={{ color: themeToUse.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>JOB DESCRIPTION</Text>
+              <TextInput
+                value={jd}
+                onChangeText={setJd}
+                multiline
+                placeholder="Paste the job description here..."
+                placeholderTextColor={themeToUse.textMuted}
+                style={{
+                  backgroundColor: themeToUse.surface, borderRadius: 12, padding: 16,
+                  color: themeToUse.textPrimary, fontSize: 14, minHeight: 180, textAlignVertical: "top"
+                }}
+              />
             </View>
 
-            {/* Job Description */}
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 8 }}>
-              JOB DESCRIPTION
-            </Text>
-            <TextInput
-              value={jd}
-              onChangeText={setJd}
-              multiline
-              placeholder="PASTE THE FULL JOB DESCRIPTION HERE..."
-              placeholderTextColor="#333"
-              style={{
-                borderRadius: 4, borderWidth: 1, borderColor: "#1F1F1F",
-                backgroundColor: "#121212", padding: 16, color: "#FFFFFF",
-                fontSize: 13, lineHeight: 20, minHeight: 200, textAlignVertical: "top",
-                marginBottom: 24,
-              }}
-            />
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ color: themeToUse.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>CONTENT TONE</Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                {[
+                  { id: "professional", label: "PRO", icon: <LucideBriefcase size={16} /> },
+                  { id: "enthusiastic", label: "BOLD", icon: <LucideSparkles size={16} /> },
+                  { id: "concise", label: "MINIMAL", icon: <LucideUser size={16} /> },
+                ].map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    onPress={() => setTone(t.id as any)}
+                    style={{
+                      flex: 1, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center",
+                      backgroundColor: tone === t.id ? themeToUse.accent : themeToUse.card,
+                      borderWidth: 1, borderColor: tone === t.id ? themeToUse.accent : themeToUse.border,
+                      flexDirection: "row", gap: 6
+                    }}
+                  >
+                    {React.cloneElement(t.icon as any, { color: tone === t.id ? "#FFF" : themeToUse.textSecondary })}
+                    <Text style={{ color: tone === t.id ? "#FFF" : themeToUse.textSecondary, fontSize: 11, fontWeight: "900" }}>{t.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-            {/* Generate Button */}
             <TouchableOpacity
               onPress={handleGenerate}
-              disabled={loading}
+              disabled={loading || !jd.trim()}
               activeOpacity={0.8}
               style={{
-                backgroundColor: "#8B5CF6", borderRadius: 6, paddingVertical: 16,
-                alignItems: "center", marginBottom: 32, opacity: loading ? 0.7 : 1,
-                flexDirection: "row", justifyContent: "center", gap: 10,
+                backgroundColor: themeToUse.accent, borderRadius: 16, height: 56,
+                alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
+                opacity: (!jd.trim() || loading) ? 0.5 : 1,
+                shadowColor: themeToUse.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8
               }}
             >
-              {loading ? (
+              {loading ? <ActivityIndicator color="#FFF" /> : (
                 <>
-                  <ActivityIndicator color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>GENERATING...</Text>
-                </>
-              ) : (
-                <>
-                  <LucideSparkles color="#fff" size={18} />
-                  <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 12, letterSpacing: 1.5 }}>
-                    GENERATE COVER LETTER
-                  </Text>
+                  <LucideSend color="#FFF" size={20} />
+                  <Text style={{ color: "#FFF", fontWeight: "900", fontSize: 15, letterSpacing: 1 }}>GENERATE DRAFT</Text>
                 </>
               )}
             </TouchableOpacity>

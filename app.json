@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ResumeAI",
-    "slug": "resume-app",
+    "slug": "resumeai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -33,6 +33,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c97f781a-6b1b-459f-992e-6d11ebee9b69"
+      }
+    },
+    "owner": "amit.k.singh"
   }
 }
