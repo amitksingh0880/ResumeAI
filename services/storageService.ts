@@ -29,6 +29,21 @@ const KEYS = {
   IMPORT_DRAFT: "resume:importDraft",
   IMPORT_DRAFT_CSS: "resume:importDraftCSS",
   IMPORT_DRAFT_FILENAME: "resume:importDraftFilename",
+  SETTINGS: "resume:settings",
+};
+
+export interface AppSettings {
+  editorFontSize: number;
+  aiCreativity: "low" | "high";
+  autoSave: boolean;
+  appearance: "dark" | "light";
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  editorFontSize: 12,
+  aiCreativity: "low",
+  autoSave: true,
+  appearance: "dark",
 };
 
 // ─── Documents ─────────────────────────────────────────────────────────────
@@ -182,4 +197,51 @@ export async function getImportDraftCSS(): Promise<string | null> {
 
 export async function getImportDraftFilename(): Promise<string | null> {
   return AsyncStorage.getItem(KEYS.IMPORT_DRAFT_FILENAME);
+}
+
+// ─── Settings ──────────────────────────────────────────────────────────────
+
+export async function getSettings(): Promise<AppSettings> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.SETTINGS);
+    if (!raw) return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+export async function saveSettings(settings: Partial<AppSettings>): Promise<void> {
+  const current = await getSettings();
+  const updated = { ...current, ...settings };
+  await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(updated));
+}
+
+// ─── Data Export/Import ────────────────────────────────────────────────────
+
+export async function exportAllData(): Promise<string> {
+  const allKeys = Object.values(KEYS);
+  const data: Record<string, any> = {};
+  for (const key of allKeys) {
+    const val = await AsyncStorage.getItem(key);
+    if (val) data[key] = val;
+  }
+  return JSON.stringify(data, null, 2);
+}
+
+export async function importAllData(json: string): Promise<void> {
+  try {
+    const data = JSON.parse(json);
+    const pairs: [string, string][] = [];
+    for (const key in data) {
+      if (Object.values(KEYS).includes(key as any)) {
+        pairs.push([key, data[key]]);
+      }
+    }
+    if (pairs.length > 0) {
+      await AsyncStorage.multiSet(pairs);
+    }
+  } catch (e) {
+    throw new Error("Invalid backup file.");
+  }
 }

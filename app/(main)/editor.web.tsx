@@ -3,7 +3,7 @@
  * react-native-webview which is not supported on web.
  */
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -12,118 +12,78 @@ import {
   Text,
   View,
   ActivityIndicator,
+  TextInput,
+  ScrollView,
 } from "react-native";
 import { 
-  LucideSparkles, 
-  LucideChevronLeft, 
-  LucideEye, 
-  LucideCode2, 
-  LucidePalette, 
+  LucideSparkles,
+  LucideChevronLeft,
+  LucideEye,
+  LucidePalette,
   LucidePlus,
   LucideSave,
   LucideDownload,
-  LucideLink
+  LucideLink,
+  LucideZap, 
+  LucideCode, 
+  LucideLayers, 
+  LucideMessageSquare, 
+  LucideChevronUp, 
+  LucideChevronDown
 } from "lucide-react-native";
 import {
   getActiveDocumentId,
   getDocumentById,
   updateDocumentSource,
   getApiKey,
+  getSettings,
   type ResumeDocument,
+  type AppSettings
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
 import { renderTemplate } from "@/services/templateRenderer";
-import { fixAllLinks } from "@/services/aiService";
+import { fixAllLinks, neuralChat } from "@/services/aiService";
 import { exportToPDF } from "@/services/exportService";
-import { extractLinkableItems, upsertLink, removeLink, type LinkableItem } from "@/services/linkService";
+import { 
+  extractLinkableItems, 
+  upsertLink, 
+  removeLink, 
+  upsertQRCode,
+  moveSection,
+  type LinkableItem 
+} from "@/services/linkService";
+import { Theme, type AppTheme } from "@/constants/Theme";
 
-function EditorIframe({
-  source,
-  onChange,
-}: {
-  source: string;
-  onChange: (v: string) => void;
-}) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [ready, setReady] = useState(false);
-
-  const escaped = source
-    .replace(/\\/g, "\\\\")
-    .replace(/`/g, "\\`")
-    .replace(/\$/g, "\\$");
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/tomorrow-night-bright.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js"></script>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html, body { height:100%; background:#0A0A0A; overflow:hidden; }
-.CodeMirror { height:100vh; font-family:'JetBrains Mono','Courier New',monospace; font-size:14px; line-height:1.6; background:#0A0A0A; color:#f8fafc; }
-.CodeMirror-gutters { background:#0A0A0A; border-right:1px solid #1F1F1F; }
-.CodeMirror-linenumber { color:#444; }
-.CodeMirror-cursor { border-color:#00F0FF; }
-.CodeMirror-selected { background:rgba(0,240,255,0.1) !important; }
-.cm-keyword { color:#00F0FF; font-weight:bold; }
-.cm-bracket { color:#8B5CF6; }
-.cm-comment { color:#444; font-style:italic; }
-.cm-string { color:#8B5CF6; }
-.cm-atom { color:#00F0FF; }
-</style>
-</head>
-<body>
-<textarea id="editor"></textarea>
-<script>
-var editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
-  mode:'stex', theme:'tomorrow-night-bright', lineNumbers:true, lineWrapping:true,
-  indentUnit:2, tabSize:2,
-  extraKeys:{ Tab: function(cm){ cm.replaceSelection('  '); } }
-});
-editor.setValue(\`${escaped}\`);
-editor.on('change', function() {
-  window.parent.postMessage({ type:'change', value:editor.getValue() }, '*');
-});
-window.parent.postMessage({ type:'ready' }, '*');
-</script>
-</body>
-</html>`;
+function SourcePanel({ source, onSourceChange, theme }: { source: string; onSourceChange: (s: string) => void; theme: AppTheme }) {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   useEffect(() => {
-    function onMsg(e: MessageEvent) {
-      if (!e.data || typeof e.data !== "object") return;
-      if (e.data.type === "ready") setReady(true);
-      if (e.data.type === "change") onChange(e.data.value);
-    }
-    window.addEventListener("message", onMsg);
-    return () => window.removeEventListener("message", onMsg);
-  }, [onChange]);
+    getSettings().then(setSettings);
+  }, []);
 
-  // If source changes externally (like from AI Add Skill), we must update the editor!
-  useEffect(() => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      // Small hack: send a message into the iframe to update the value
-      // We don't have a listener inside the iframe for this, so we could just reload the iframe URL
-      // by setting a key on the iframe or let React remount it.
-    }
-  }, [source]);
-
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-
-  // We add 'key={source.length}' to force a remount of the iframe when external source changes substantially
   return (
-    <iframe
-      key={source.length}
-      ref={iframeRef}
-      src={url}
-      style={{ width: "100%", height: "100%", border: "none", background: "#0A0A0A" }}
-      title="DSL Editor"
-    />
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <textarea
+        value={source}
+        onChange={(e) => onSourceChange(e.target.value)}
+        placeholder="// Start writing your resume in DSL format..."
+        spellCheck={false}
+        style={{
+          flex: 1,
+          width: "100%",
+          height: "100%",
+          padding: "16px",
+          backgroundColor: "transparent",
+          color: theme.textPrimary,
+          border: "none",
+          outline: "none",
+          resize: "none",
+          fontFamily: "'Courier New', Courier, monospace",
+          fontSize: (settings?.editorFontSize ?? 13) + "px",
+          lineHeight: "1.6",
+        }}
+      />
+    </View>
   );
 }
 
@@ -142,12 +102,12 @@ function PreviewIframe({ html }: { html: string }) {
 // ─── Category styling helpers ─────────────────────────────────────────────────
 
 const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
-  project: { color: "#00F0FF", icon: "📁" },
+  project: { color: "#9A8174", icon: "📁" },
   skill: { color: "#34C759", icon: "⚡" },
-  company: { color: "#FFD60A", icon: "🏢" },
-  certification: { color: "#FF6B6B", icon: "📜" },
-  education: { color: "#8B5CF6", icon: "🎓" },
-  contact: { color: "#007AFF", icon: "📧" },
+  company: { color: "#9A8174", icon: "🏢" },
+  certification: { color: "#9A8174", icon: "📜" },
+  education: { color: "#9A8174", icon: "🎓" },
+  contact: { color: "#9A8174", icon: "📧" },
   other: { color: "#888", icon: "🔗" },
 };
 
@@ -156,17 +116,17 @@ const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
 function LinkManagerPanel({
   source,
   onSourceChange,
+  theme
 }: {
   source: string;
   onSourceChange: (newSource: string) => void;
+  theme: AppTheme;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editUrl, setEditUrl] = useState("");
   const [filter, setFilter] = useState<string>("all");
 
   const items = extractLinkableItems(source);
-
-  // Group by category
   const grouped: Record<string, LinkableItem[]> = {};
   for (const item of items) {
     const key = item.category;
@@ -176,329 +136,164 @@ function LinkManagerPanel({
 
   const categories = Object.keys(grouped);
   const filteredCategories = filter === "all" ? categories : categories.filter(c => c === filter);
-
   const linkedCount = items.filter(i => i.currentUrl).length;
   const totalCount = items.length;
 
-  function handleSaveLink(item: LinkableItem) {
+  function handleSaveLink(item: any) {
     if (!editUrl.trim()) return;
     const url = editUrl.startsWith("http") ? editUrl : `https://${editUrl}`;
-    const newSource = upsertLink(source, item.label, url);
-    onSourceChange(newSource);
+    if (item.label === "Portfolio / Website QR") {
+      onSourceChange(upsertQRCode(source, url));
+    } else {
+      onSourceChange(upsertLink(source, item.label, url));
+    }
     setEditingId(null);
     setEditUrl("");
-  }
-
-  function handleRemoveLink(item: LinkableItem) {
-    const newSource = removeLink(source, item.label);
-    onSourceChange(newSource);
-  }
-
-  function handleStartEdit(item: LinkableItem) {
-    setEditingId(item.id);
-    setEditUrl(item.currentUrl || "https://");
-  }
+  };
 
   return (
-    <div style={{
-      height: "100%",
-      overflowY: "auto",
-      background: "#0A0A0A",
-      padding: "20px",
-      fontFamily: "'Inter', -apple-system, sans-serif",
-      color: "#fff",
-    }}>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 20 }}>
       {/* Header Stats */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: "20px",
-        padding: "16px",
-        background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(0,240,255,0.08))",
-        borderRadius: "8px",
-        border: "1px solid rgba(139,92,246,0.2)",
+      <View style={{
+        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+        marginBottom: 20, padding: 16, borderRadius: 8,
+        backgroundColor: theme.accent + "15", borderWidth: 1, borderColor: theme.border,
       }}>
-        <div>
-          <div style={{ fontSize: "16px", fontWeight: "800", letterSpacing: "0.5px" }}>🔗 LINK MANAGER</div>
-          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
-            Add links to projects, skills, companies & more
-          </div>
-        </div>
-        <div style={{
-          display: "flex",
-          gap: "12px",
-          alignItems: "center",
+        <View>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: theme.textPrimary, letterSpacing: 0.5 }}>🔗 LINK MANAGER</Text>
+          <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 4 }}>Manage interactive links & QR codes</Text>
+        </View>
+        <View style={{
+          backgroundColor: theme.success + "15", borderColor: theme.success + "33",
+          borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
         }}>
-          <div style={{
-            background: "rgba(52,199,89,0.15)",
-            border: "1px solid rgba(52,199,89,0.3)",
-            borderRadius: "20px",
-            padding: "6px 14px",
-            fontSize: "11px",
-            fontWeight: "800",
-            color: "#34C759",
-          }}>
-            {linkedCount} / {totalCount} LINKED
-          </div>
-        </div>
-      </div>
+          <Text style={{ fontSize: 11, fontWeight: "800", color: theme.success }}>{linkedCount} / {totalCount} LINKED</Text>
+        </View>
+      </View>
 
       {/* Filter Pills */}
-      <div style={{ display: "flex", gap: "6px", marginBottom: "16px", flexWrap: "wrap" }}>
-        <button
-          onClick={() => setFilter("all")}
+      <View style={{ flexDirection: "row", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        <TouchableOpacity
+          onPress={() => setFilter("all")}
           style={{
-            background: filter === "all" ? "rgba(0,240,255,0.2)" : "rgba(255,255,255,0.05)",
-            border: `1px solid ${filter === "all" ? "#00F0FF" : "rgba(255,255,255,0.1)"}`,
-            borderRadius: "20px",
-            padding: "5px 14px",
-            fontSize: "10px",
-            fontWeight: "800",
-            color: filter === "all" ? "#00F0FF" : "#888",
-            cursor: "pointer",
-            letterSpacing: "0.5px",
+            backgroundColor: filter === "all" ? theme.accent + "15" : theme.surface,
+            borderColor: filter === "all" ? theme.accent : theme.border,
+            borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
           }}
         >
-          ALL ({totalCount})
-        </button>
-        {categories.map(cat => {
-          const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.other;
-          return (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              style={{
-                background: filter === cat ? `${cfg.color}22` : "rgba(255,255,255,0.05)",
-                border: `1px solid ${filter === cat ? cfg.color : "rgba(255,255,255,0.1)"}`,
-                borderRadius: "20px",
-                padding: "5px 14px",
-                fontSize: "10px",
-                fontWeight: "800",
-                color: filter === cat ? cfg.color : "#888",
-                cursor: "pointer",
-                letterSpacing: "0.5px",
-              }}
-            >
-              {cfg.icon} {cat.toUpperCase()} ({grouped[cat].length})
-            </button>
-          );
-        })}
-      </div>
+          <Text style={{ fontSize: 10, fontWeight: "800", color: filter === "all" ? theme.accent : theme.textSecondary }}>ALL</Text>
+        </TouchableOpacity>
+        {categories.map(cat => (
+          <TouchableOpacity
+            key={cat}
+            onPress={() => setFilter(cat)}
+            style={{
+              backgroundColor: filter === cat ? theme.accent + "15" : theme.surface,
+              borderColor: filter === cat ? theme.accent : theme.border,
+              borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: "800", color: filter === cat ? theme.accent : theme.textSecondary }}>{cat.toUpperCase()}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Global QR Code Action if missing */}
+      {!items.some(i => i.label === "Portfolio / Website QR") && filter === "all" && (
+        <View style={{ marginBottom: 20 }}>
+          <TouchableOpacity
+            onPress={() => { setEditingId("new-qr"); setEditUrl(""); }}
+            style={{
+              width: "100%", backgroundColor: theme.accent + "05", borderColor: theme.accent + "33",
+              borderWidth: 1, borderStyle: "dashed", borderRadius: 6, padding: 12, alignItems: "center",
+            }}
+          >
+            <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900" }}>✨ ADD PORTFOLIO QR CODE</Text>
+          </TouchableOpacity>
+          {editingId === "new-qr" && (
+            <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
+              <TextInput
+                value={editUrl}
+                onChangeText={setEditUrl}
+                placeholder="https://your-portfolio.com"
+                placeholderTextColor={theme.textMuted}
+                autoFocus
+                style={{
+                  backgroundColor: theme.surface, borderColor: theme.accent, borderWidth: 1,
+                  borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, color: theme.textPrimary, fontSize: 12, flex: 1,
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => handleSaveLink({ label: "Portfolio / Website QR" })}
+                style={{ backgroundColor: theme.accent, borderRadius: 4, paddingHorizontal: 16, justifyContent: "center" }}
+              >
+                <Text style={{ color: "#000", fontSize: 10, fontWeight: "800" }}>CREATE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingId(null)} style={{ backgroundColor: theme.surface, borderRadius: 4, paddingHorizontal: 12, justifyContent: "center" }}>
+                <Text style={{ color: theme.textMuted }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Items by category */}
       {filteredCategories.map(cat => {
         const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.other;
-        const catItems = grouped[cat];
         return (
-          <div key={cat} style={{ marginBottom: "20px" }}>
-            <div style={{
-              fontSize: "10px",
-              fontWeight: "900",
-              letterSpacing: "1.5px",
-              color: cfg.color,
-              marginBottom: "8px",
-              paddingBottom: "6px",
-              borderBottom: `1px solid ${cfg.color}33`,
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}>
-              <span>{cfg.icon}</span> {cat.toUpperCase()}
-            </div>
-
-            {catItems.map(item => {
-              const isEditing = editingId === item.id;
-              const hasLink = !!item.currentUrl;
-
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "10px 14px",
-                    background: isEditing
-                      ? "rgba(139,92,246,0.1)"
-                      : hasLink
-                      ? "rgba(52,199,89,0.05)"
-                      : "rgba(255,255,255,0.02)",
-                    borderRadius: "6px",
-                    marginBottom: "4px",
-                    border: `1px solid ${
-                      isEditing ? "rgba(139,92,246,0.3)" : hasLink ? "rgba(52,199,89,0.15)" : "rgba(255,255,255,0.05)"
-                    }`,
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {/* Status dot */}
-                  <div style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "3px",
-                    background: hasLink ? "#34C759" : "#333",
-                    flexShrink: 0,
-                  }} />
-
-                  {/* Label */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      color: "#fff",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {item.label}
-                    </div>
-                    {hasLink && !isEditing && (
-                      <div style={{
-                        fontSize: "10px",
-                        color: "#007AFF",
-                        marginTop: "2px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}>
-                        {item.currentUrl}
-                      </div>
-                    )}
-                    <div style={{ fontSize: "9px", color: "#555", marginTop: "1px" }}>
-                      {item.section}
-                    </div>
-                  </div>
-
-                  {/* Edit area */}
-                  {isEditing ? (
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0 }}>
-                      <input
-                        type="url"
-                        value={editUrl}
-                        onChange={(e: any) => setEditUrl(e.target.value)}
-                        onKeyDown={(e: any) => { if (e.key === "Enter") handleSaveLink(item); }}
-                        placeholder="https://..."
-                        autoFocus
-                        style={{
-                          background: "#1A1A1A",
-                          border: "1px solid rgba(139,92,246,0.4)",
-                          borderRadius: "4px",
-                          padding: "6px 10px",
-                          color: "#fff",
-                          fontSize: "11px",
-                          width: "220px",
-                          outline: "none",
-                          fontFamily: "monospace",
-                        }}
-                      />
-                      <button
-                        onClick={() => handleSaveLink(item)}
-                        style={{
-                          background: "#8B5CF6",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "4px",
-                          padding: "6px 12px",
-                          fontSize: "10px",
-                          fontWeight: "800",
-                          cursor: "pointer",
-                          letterSpacing: "0.5px",
-                        }}
-                      >
-                        SAVE
-                      </button>
-                      <button
-                        onClick={() => { setEditingId(null); setEditUrl(""); }}
-                        style={{
-                          background: "rgba(255,255,255,0.05)",
-                          color: "#888",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          borderRadius: "4px",
-                          padding: "6px 10px",
-                          fontSize: "10px",
-                          fontWeight: "800",
-                          cursor: "pointer",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-                      <button
-                        onClick={() => handleStartEdit(item)}
-                        style={{
-                          background: hasLink ? "rgba(0,122,255,0.1)" : "rgba(139,92,246,0.15)",
-                          color: hasLink ? "#007AFF" : "#8B5CF6",
-                          border: `1px solid ${hasLink ? "rgba(0,122,255,0.2)" : "rgba(139,92,246,0.3)"}`,
-                          borderRadius: "4px",
-                          padding: "5px 10px",
-                          fontSize: "9px",
-                          fontWeight: "900",
-                          cursor: "pointer",
-                          letterSpacing: "0.5px",
-                        }}
-                      >
-                        {hasLink ? "EDIT" : "+ LINK"}
-                      </button>
-                      {hasLink && (
-                        <>
-                          <button
-                            onClick={() => window.open(item.currentUrl, "_blank")}
-                            style={{
-                              background: "rgba(52,199,89,0.1)",
-                              color: "#34C759",
-                              border: "1px solid rgba(52,199,89,0.2)",
-                              borderRadius: "4px",
-                              padding: "5px 8px",
-                              fontSize: "9px",
-                              fontWeight: "900",
-                              cursor: "pointer",
-                            }}
-                          >
-                            ↗
-                          </button>
-                          <button
-                            onClick={() => handleRemoveLink(item)}
-                            style={{
-                              background: "rgba(255,59,48,0.1)",
-                              color: "#FF3B30",
-                              border: "1px solid rgba(255,59,48,0.2)",
-                              borderRadius: "4px",
-                              padding: "5px 8px",
-                              fontSize: "9px",
-                              fontWeight: "900",
-                              cursor: "pointer",
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </>
+          <View key={cat} style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 10, fontWeight: "900", letterSpacing: 1.5, color: theme.textPrimary, marginBottom: 8, borderBottomWidth: 1, borderColor: theme.border, paddingBottom: 6 }}>
+              {cat.toUpperCase()}
+            </Text>
+            <View style={{ gap: 8 }}>
+              {grouped[cat].map(item => {
+                const hasLink = !!item.currentUrl;
+                const isEditing = editingId === item.id;
+                return (
+                  <View key={item.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: theme.card, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: theme.border }}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: theme.textPrimary }}>{item.label}</Text>
+                      {hasLink && !isEditing && (
+                        <Text style={{ fontSize: 10, color: theme.accent, marginTop: 2, flexWrap: "wrap" }}>{item.currentUrl}</Text>
                       )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    </View>
+                    {isEditing ? (
+                      <View style={{ flexDirection: "row", gap: 6 }}>
+                        <TextInput
+                          value={editUrl}
+                          onChangeText={setEditUrl}
+                          style={{ backgroundColor: theme.surface, borderColor: theme.accent, borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5, color: theme.textPrimary, fontSize: 11, width: 180 }}
+                        />
+                        <TouchableOpacity onPress={() => handleSaveLink(item)} style={{ backgroundColor: theme.accent, borderRadius: 4, paddingHorizontal: 10, justifyContent: "center" }}>
+                          <Text style={{ color: "#000", fontSize: 9, fontWeight: "800" }}>SAVE</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={{ flexDirection: "row", gap: 4 }}>
+                        <TouchableOpacity
+                          onPress={() => { setEditingId(item.id); setEditUrl(item.currentUrl || "https://"); }}
+                          style={{ backgroundColor: theme.accent + "15", borderColor: theme.border, borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5 }}
+                        >
+                          <Text style={{ color: theme.accent, fontSize: 9, fontWeight: "900" }}>{hasLink ? "EDIT" : "+ LINK"}</Text>
+                        </TouchableOpacity>
+                        {hasLink && (
+                          <TouchableOpacity
+                            onPress={() => onSourceChange(removeLink(source, item.label))}
+                            style={{ backgroundColor: theme.danger + "15", borderColor: theme.danger + "33", borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5 }}
+                          >
+                            <Text style={{ color: theme.danger, fontSize: 9, fontWeight: "900" }}>✕</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
         );
       })}
-
-      {totalCount === 0 && (
-        <div style={{
-          textAlign: "center",
-          padding: "60px 20px",
-          color: "#555",
-        }}>
-          <div style={{ fontSize: "40px", marginBottom: "12px" }}>🔗</div>
-          <div style={{ fontSize: "13px", fontWeight: "700" }}>No linkable items found</div>
-          <div style={{ fontSize: "11px", marginTop: "6px" }}>
-            Add projects, skills, or experience to your resume to start linking
-          </div>
-        </div>
-      )}
-    </div>
+    </ScrollView>
   );
 }
 
@@ -506,14 +301,29 @@ export default function EditorScreen() {
   const [doc, setDoc] = useState<ResumeDocument | null>(null);
   const [source, setSource] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
-  const [tab, setTab] = useState<"editor" | "preview" | "links">("editor");
+  const [tab, setTab] = useState<"editor" | "preview" | "links" | "structure" | "chat">("editor");
   const [saving, setSaving] = useState(false);
   const [rewriting, setRewriting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [copiedHtml, setCopiedHtml] = useState(false);
+
+  const handleCopyHtml = async () => {
+    try {
+      await navigator.clipboard.writeText(previewHtml);
+      setCopiedHtml(true);
+      setTimeout(() => setCopiedHtml(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy HTML:", err);
+    }
+  };
+
+  const [theme, setTheme] = useState<AppTheme>(Theme.dark);
+
   useFocusEffect(
     useCallback(() => {
       loadDoc();
+      getSettings().then(s => setTheme(Theme[s.appearance]));
     }, [])
   );
 
@@ -584,155 +394,169 @@ export default function EditorScreen() {
     }
   };
 
+  // ─── Keyboard Shortcuts ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key === "s") {
+        e.preventDefault();
+        if (doc && source.trim()) {
+          setSaving(true);
+          await updateDocumentSource(doc.id, source, "Keyboard save");
+          setSaving(false);
+        }
+      }
+      if (ctrl && e.key === "e") {
+        e.preventDefault();
+        if (source.trim()) {
+          try {
+            const ast = parseResumeDSL(source);
+            const html = renderTemplate(doc?.templateId ?? "jakes-cv", ast, doc?.customCSS);
+            await exportToPDF(html, doc?.title || "Resume");
+          } catch {}
+        }
+      }
+      if (ctrl && e.key === "1") { e.preventDefault(); setTab("editor"); }
+      if (ctrl && e.key === "2") { e.preventDefault(); setTab("preview"); }
+      if (ctrl && e.key === "3") { e.preventDefault(); setTab("links"); }
+      if (ctrl && e.key === "4") { e.preventDefault(); setTab("structure"); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [source, doc]);
+
+  // ─── Real-time Stats ─────────────────────────────────────────────────────
+  const stats = (() => {
+    if (!source) return { words: 0, bullets: 0, sections: 0, pages: 0, chars: 0 };
+    const words = source.replace(/\\[a-z]+\s*{/gi, " ").replace(/[{}\\]/g, " ").split(/\s+/).filter(w => w.length > 1).length;
+    const bullets = (source.match(/\\(bullet|item)/g) || []).length;
+    const sections = (source.match(/\\section/g) || []).length;
+    const chars = source.length;
+    const pages = Math.max(1, Math.round((words / 500) * 10) / 10);
+    return { words, bullets, sections, pages, chars };
+  })();
+
   if (!doc) return null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Top Header */}
       <View style={{ 
-        height: 60, 
-        flexDirection: "row", 
-        alignItems: "center", 
-        borderBottomWidth: 1, 
-        borderColor: "#1F1F1F", 
-        paddingHorizontal: 16, 
-        justifyContent: "space-between" 
+        height: 64, flexDirection: "row", alignItems: "center", 
+        borderBottomWidth: 1, borderColor: theme.border, 
+        paddingHorizontal: 16, justifyContent: "space-between",
+        backgroundColor: theme.background
       }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <TouchableOpacity onPress={() => router.replace("/(main)/dashboard")} activeOpacity={0.7}>
-            <LucideChevronLeft color="#00F0FF" size={24} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <TouchableOpacity 
+            onPress={() => router.replace("/(main)/dashboard")} 
+            activeOpacity={0.7}
+            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: theme.card, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.border }}
+          >
+            <LucideChevronLeft color={theme.accent} size={20} />
           </TouchableOpacity>
           <View>
-            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>EDITOR</Text>
-            <Text style={{ color: "#444", fontSize: 10, fontWeight: "900" }} numberOfLines={1}>
-              {doc.title.toUpperCase()}
-            </Text>
+            <Text style={{ color: theme.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: -0.2 }}>STUDIO EDITOR</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: theme.accent }} />
+              <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: "700" }} numberOfLines={1}>
+                {doc.title.toUpperCase()}
+              </Text>
+            </View>
           </View>
+        </View>
+
+        {/* Tab Buttons - Modern Segmented Control */}
+        <View style={{ 
+          flexDirection: "row", padding: 4, backgroundColor: theme.card, 
+          borderRadius: 12, borderWidth: 1, borderColor: theme.border, gap: 2,
+          minWidth: 400
+        }}>
+          {[
+            { id: "editor", label: "SOURCE", icon: <LucideCode size={13} /> },
+            { id: "preview", label: "RENDER", icon: <LucideEye size={13} /> },
+            { id: "links", label: "LINKS", icon: <LucideLink size={13} /> },
+            { id: "structure", label: "STRUCT", icon: <LucideLayers size={13} /> },
+            { id: "chat", label: "CHAT", icon: <LucideMessageSquare size={13} /> },
+          ].map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              onPress={() => setTab(t.id as any)}
+              activeOpacity={0.7}
+              style={{ 
+                flex: 1, height: 32, borderRadius: 8,
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
+                backgroundColor: tab === t.id ? theme.surface : "transparent",
+              }}
+            >
+              {React.cloneElement(t.icon as any, { color: tab === t.id ? theme.accent : theme.textMuted })}
+              <Text style={{ 
+                color: tab === t.id ? theme.textPrimary : theme.textMuted, 
+                fontSize: 8, fontWeight: "900", letterSpacing: 0.5 
+              }}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}>
-            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: saving ? "#FFD60A" : "#34C759", marginRight: 6 }} />
-            <Text style={{ color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: saving ? "#FFD60A" : theme.success, marginRight: 6 }} />
+            <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>
               {saving ? "SYNCING..." : "AUTOSAVED"}
             </Text>
           </View>
-          
-          <TouchableOpacity
-            onPress={() => router.push("/(modals)/template-switcher")}
-            activeOpacity={0.7}
-            style={{ 
-              backgroundColor: "rgba(139, 92, 246, 0.1)", 
-              borderRadius: 4, 
-              width: 36, height: 36,
-              alignItems: "center", justifyContent: "center",
-              borderWidth: 1, 
-              borderColor: "rgba(139, 92, 246, 0.3)" 
-            }}
-          >
-            <LucidePalette color="#8B5CF6" size={18} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={() => router.push("/(modals)/add-skill")}
-            activeOpacity={0.7}
-            style={{ 
-              backgroundColor: "rgba(0, 240, 255, 0.1)", 
-              borderRadius: 4, 
-              width: 36, height: 36,
-              alignItems: "center", justifyContent: "center",
-              borderWidth: 1,
-              borderColor: "rgba(0, 240, 255, 0.3)",
-              marginRight: 4
-            }}
-          >
-            <LucidePlus color="#00F0FF" size={18} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={async () => {
-              try {
-                await exportToPDF(previewHtml, doc.title);
-              } catch (e) {
-                Alert.alert("Export Failed", "Could not generate PDF.");
-              }
-            }}
-            activeOpacity={0.7}
-            style={{ 
-              backgroundColor: "#00F0FF", 
-              borderRadius: 4, 
-              paddingHorizontal: 10,
-              height: 36,
-              flexDirection: "row",
-              alignItems: "center", justifyContent: "center",
-              gap: 6
-            }}
-          >
-            <LucideDownload color="#000" size={16} />
-            <Text style={{ color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 0.5 }}>EXPORT</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
-      {/* View Toggle — 3 tabs */}
-      <View style={{ flexDirection: "row", padding: 12, gap: 8, backgroundColor: "#121212" }}>
-        <TouchableOpacity
-          onPress={() => setTab("editor")}
-          activeOpacity={0.7}
-          style={{ 
-            flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", 
-            gap: 6, height: 36, borderRadius: 4, 
-            backgroundColor: tab === "editor" ? "#1F1F1F" : "transparent", 
-            borderWidth: 1, borderColor: tab === "editor" ? "#00F0FF" : "transparent" 
-          }}
-        >
-          <LucideCode2 color={tab === "editor" ? "#00F0FF" : "#444"} size={14} />
-          <Text style={{ color: tab === "editor" ? "#FFFFFF" : "#444", fontSize: 10, fontWeight: "800" }}>SOURCE</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setTab("preview")}
-          activeOpacity={0.7}
-          style={{ 
-            flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", 
-            gap: 6, height: 36, borderRadius: 4, 
-            backgroundColor: tab === "preview" ? "#1F1F1F" : "transparent", 
-            borderWidth: 1, borderColor: tab === "preview" ? "#00F0FF" : "transparent" 
-          }}
-        >
-          <LucideEye color={tab === "preview" ? "#00F0FF" : "#444"} size={14} />
-          <Text style={{ color: tab === "preview" ? "#FFFFFF" : "#444", fontSize: 10, fontWeight: "800" }}>RENDER</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setTab("links")}
-          activeOpacity={0.7}
-          style={{ 
-            flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", 
-            gap: 6, height: 36, borderRadius: 4, 
-            backgroundColor: tab === "links" ? "#1F1F1F" : "transparent", 
-            borderWidth: 1, borderColor: tab === "links" ? "#8B5CF6" : "transparent" 
-          }}
-        >
-          <LucideLink color={tab === "links" ? "#8B5CF6" : "#444"} size={14} />
-          <Text style={{ color: tab === "links" ? "#FFFFFF" : "#444", fontSize: 10, fontWeight: "800" }}>LINKS</Text>
-        </TouchableOpacity>
+      {/* Stats Bar */}
+      <View style={{
+        flexDirection: "row", alignItems: "center", justifyContent: "center",
+        gap: 20, paddingVertical: 6, backgroundColor: theme.surface,
+        borderBottomWidth: 1, borderColor: theme.border,
+      }}>
+        <Text style={{ color: theme.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 }}>
+          {stats.words} WORDS
+        </Text>
+        <Text style={{ color: theme.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 }}>
+          {stats.bullets} BULLETS
+        </Text>
+        <Text style={{ color: theme.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 }}>
+          {stats.sections} SECTIONS
+        </Text>
+        <Text style={{ color: stats.pages > 1.5 ? theme.danger : theme.success, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 }}>
+          ~{stats.pages} PAGE{stats.pages !== 1 ? "S" : ""}
+        </Text>
       </View>
 
-      {/* Editor/Preview/Links Area */}
-      <View style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+      {/* Editor/Preview/Links/Structure Area */}
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
         {tab === "editor" ? (
-          <EditorIframe source={source} onChange={handleChange} />
+          <SourcePanel source={source} onSourceChange={handleChange} theme={theme} />
         ) : tab === "preview" ? (
-          <PreviewIframe html={previewHtml} />
+          <View style={{ flex: 1 }}>
+            <View style={{ paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 1, borderColor: theme.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 10, fontWeight: "800", color: theme.textSecondary }}>LIVE RENDER</Text>
+              <TouchableOpacity
+                onPress={handleCopyHtml}
+                style={{
+                  backgroundColor: copiedHtml ? theme.success + "15" : theme.surface,
+                  borderColor: copiedHtml ? theme.success + "33" : theme.border,
+                  borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4,
+                }}
+              >
+                <Text style={{ color: copiedHtml ? theme.success : theme.textSecondary, fontSize: 9, fontWeight: "900" }}>
+                  {copiedHtml ? "✓ COPIED" : "📋 COPY HTML"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <PreviewIframe html={previewHtml} />
+          </View>
+        ) : tab === "links" ? (
+          <LinkManagerPanel source={source} onSourceChange={handleChange} theme={theme} />
+        ) : tab === "structure" ? (
+          <StructurePanel source={source} onSourceChange={handleChange} theme={theme} />
         ) : (
-          <LinkManagerPanel
-            source={source}
-            onSourceChange={(newSource: string) => {
-              setSource(newSource);
-              if (doc) {
-                updateDocumentSource(doc.id, newSource, "Link update");
-              }
-            }}
-          />
+          <NeuralChatPanel source={source} onSourceChange={handleChange} theme={theme} />
         )}
       </View>
 
@@ -740,17 +564,165 @@ export default function EditorScreen() {
       {tab === "editor" && (
         <TouchableOpacity
           onPress={handleMagicRewrite}
+          disabled={rewriting}
           activeOpacity={0.8}
           style={{
             position: "absolute", bottom: 24, right: 24,
-            width: 56, height: 56, borderRadius: 28,
-            backgroundColor: "#8B5CF6", alignItems: "center", justifyContent: "center",
-            elevation: 10, opacity: rewriting ? 0.7 : 1
+            backgroundColor: theme.accent, width: 56, height: 56,
+            borderRadius: 28, alignItems: "center", justifyContent: "center",
+            shadowColor: theme.accent, shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.4, shadowRadius: 8, elevation: 10,
+            opacity: rewriting ? 0.7 : 1
           }}
         >
-          {rewriting ? <ActivityIndicator color="#fff" /> : <LucideSparkles color="#fff" size={24} />}
+          {rewriting ? <ActivityIndicator color="#000" /> : <LucideSparkles color="#000" size={24} />}
         </TouchableOpacity>
       )}
     </SafeAreaView>
+  );
+}
+
+function StructurePanel({ source, onSourceChange, theme }: { source: string, onSourceChange: (s: string) => void, theme: AppTheme }) {
+  const lines = source.split("\n");
+  const sections = lines.filter(l => l.startsWith("\\section{")).map(l => l.match(/\\section{([^}]+)}/)?.[1] || "");
+
+  const handleMove = (title: string, direction: "up" | "down") => {
+    onSourceChange(moveSection(source, title, direction));
+  };
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={{ padding: 30 }}>
+      <View style={{ marginBottom: 24 }}>
+        <Text style={{ fontSize: 10, fontWeight: "900", color: theme.accent, letterSpacing: 1.5 }}>REORDER</Text>
+        <Text style={{ fontSize: 20, fontWeight: "800", color: theme.textPrimary, marginTop: 4 }}>Resume Structure</Text>
+        <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 6 }}>Use arrows to reorder sections. Changes are synced instantly.</Text>
+      </View>
+
+      <View style={{ gap: 10 }}>
+        {sections.map((sec, idx) => (
+          <View key={idx} style={{ 
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, borderRadius: 8,
+            paddingHorizontal: 20, paddingVertical: 16
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: "900" }}>{String(idx + 1).padStart(2, '0')}</Text>
+              <Text style={{ color: theme.textPrimary, fontSize: 14, fontWeight: "700" }}>{sec}</Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <TouchableOpacity 
+                disabled={idx === 0}
+                onPress={() => handleMove(sec, "up")}
+                style={{ 
+                  backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1,
+                  borderRadius: 4, width: 32, height: 32, alignItems: "center", justifyContent: "center",
+                  opacity: idx === 0 ? 0.3 : 1
+                }}
+              >
+                <LucideChevronUp color={theme.textPrimary} size={16} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                disabled={idx === sections.length - 1}
+                onPress={() => handleMove(sec, "down")}
+                style={{ 
+                  backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1,
+                  borderRadius: 4, width: 32, height: 32, alignItems: "center", justifyContent: "center",
+                  opacity: idx === sections.length - 1 ? 0.3 : 1
+                }}
+              >
+                <LucideChevronDown color={theme.textPrimary} size={16} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+function NeuralChatPanel({ source, onSourceChange, theme }: { source: string, onSourceChange: (s: string) => void, theme: AppTheme }) {
+  const [messages, setMessages] = useState<{ role: "user" | "assistant", content: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    
+    const userMsg = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setLoading(true);
+
+    try {
+      const apiKey = await getApiKey();
+      const { updatedSource, assistantMessage } = await neuralChat(apiKey || "", source, userMsg, messages);
+      
+      setMessages(prev => [...prev, { role: "assistant", content: assistantMessage }]);
+      if (updatedSource !== source) {
+        onSourceChange(updatedSource);
+      }
+    } catch (err: any) {
+      setMessages(prev => [...prev, { role: "assistant", content: "Error: " + err.message }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <View style={{ padding: 20, borderBottomWidth: 1, borderColor: theme.border }}>
+        <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>NEURAL COPILOT</Text>
+        <Text style={{ color: theme.textPrimary, fontSize: 18, fontWeight: "800", marginTop: 4 }}>How can I help with your resume?</Text>
+      </View>
+      
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 16 }}>
+        {messages.length === 0 && (
+          <View style={{ backgroundColor: theme.card, padding: 20, borderRadius: 8, borderWidth: 1, borderColor: theme.border }}>
+            <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 20 }}>
+              Try asking things like:
+              {"\n"}• "Add a project about a weather app using React Native"
+              {"\n"}• "Make my professional summary more punchy"
+              {"\n"}• "Translate the Experience section to German"
+              {"\n"}• "Reorder sections to put Education at the top"
+            </Text>
+          </View>
+        )}
+        
+        {messages.map((m, i) => (
+          <View key={i} style={{ 
+            alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+            maxWidth: "85%",
+            backgroundColor: m.role === "user" ? theme.surface : theme.card,
+            padding: 14,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: theme.border
+          }}>
+            <Text style={{ color: theme.textPrimary, fontSize: 13, lineHeight: 20 }}>{m.content}</Text>
+          </View>
+        ))}
+        {loading && (
+          <View style={{ alignSelf: "flex-start", backgroundColor: theme.card, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.border }}>
+            <ActivityIndicator color={theme.accent} />
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={{ padding: 20, borderTopWidth: 1, borderColor: theme.border, flexDirection: "row", gap: 10 }}>
+        <TextInput
+          value={input}
+          onChangeText={setInput}
+          placeholder="Command your resume..."
+          placeholderTextColor={theme.textMuted}
+          style={{ flex: 1, backgroundColor: theme.surface, color: theme.textPrimary, borderRadius: 8, paddingHorizontal: 16, height: 44, borderWidth: 1, borderColor: theme.border }}
+          onSubmitEditing={handleSend}
+        />
+        <TouchableOpacity 
+          onPress={handleSend}
+          style={{ backgroundColor: theme.accent, width: 44, height: 44, borderRadius: 8, alignItems: "center", justifyContent: "center" }}
+        >
+          <LucideSparkles color="#000" size={20} />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }

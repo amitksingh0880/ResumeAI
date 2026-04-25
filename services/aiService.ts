@@ -1,3 +1,4 @@
+import { getSettings } from "./storageService";
 
 // Centralized REST API call to Groq (OpenAI compatible)
 async function callAI(passedApiKey: string, prompt: string) {
@@ -6,6 +7,10 @@ async function callAI(passedApiKey: string, prompt: string) {
   
   // Use env key if available, otherwise use the one passed from settings
   const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY || passedApiKey;
+
+  // Fetch settings for temperature
+  const settings = await getSettings();
+  const temperature = settings.aiCreativity === "high" ? 0.7 : 0.1;
 
   if (!apiKey) {
     throw new Error("No Groq API Key found. Please add it to your .env or Settings.");
@@ -27,7 +32,7 @@ async function callAI(passedApiKey: string, prompt: string) {
           content: prompt
         }
       ],
-      temperature: 0.1,
+      temperature: temperature,
       max_tokens: 4000
     })
   });
@@ -476,5 +481,189 @@ export async function fixAllLinks(
   } catch (error) {
     console.error("Fix All Links Error:", error);
     return source;
+  }
+}
+
+// ─── Cover Letter Generator ────────────────────────────────────────────────
+
+export interface CoverLetterResult {
+  coverLetter: string;
+  tone: string;
+  wordCount: number;
+}
+
+export async function generateCoverLetter(
+  apiKey: string,
+  resumeSource: string,
+  jobDescription: string,
+  companyName: string,
+  tone: "professional" | "enthusiastic" | "concise" = "professional"
+): Promise<CoverLetterResult> {
+  const toneGuide = {
+    professional: "Formal, polished, and confident. Use measured language.",
+    enthusiastic: "Energetic and passionate. Show genuine excitement for the role.",
+    concise: "Brief and direct. Maximum 200 words. No fluff.",
+  };
+
+  const prompt = `You are an expert career coach and cover letter writer.
+
+TASK: Generate a tailored cover letter using the candidate's resume and the target job description.
+
+TONE: ${toneGuide[tone]}
+
+COMPANY: ${companyName || "the company"}
+
+RESUME:
+\`\`\`
+${resumeSource}
+\`\`\`
+
+JOB DESCRIPTION:
+\`\`\`
+${jobDescription}
+\`\`\`
+
+INSTRUCTIONS:
+1. Extract the candidate's name, role, and key achievements from the resume.
+2. Identify the most relevant skills and experiences that match the job description.
+3. Write a compelling cover letter with:
+   - A strong opening hook (NOT "I am writing to apply...")
+   - 2-3 body paragraphs mapping achievements to job requirements
+   - A confident closing with a call to action
+4. Use specific metrics and achievements from the resume.
+5. Keep it under 350 words unless tone is "concise".
+
+Return the cover letter inside [LETTER] tags:
+[LETTER]
+...
+[/LETTER]`;
+
+  const res = await callAI(apiKey, prompt);
+  const match = res.match(/\[LETTER\]\s*([\s\S]*?)(?:\[\/LETTER\]|$)/i);
+  const letter = match ? match[1].trim() : res.trim();
+  const wordCount = letter.split(/\s+/).length;
+
+  return {
+    coverLetter: letter,
+    tone,
+    wordCount,
+  };
+}
+
+// ─── Grammar & Power Verb Checker ──────────────────────────────────────────
+
+export interface GrammarResult {
+  improvedSource: string;
+  changes: { original: string; improved: string; reason: string }[];
+  score: number; // 0-100 writing quality score
+}
+
+export async function checkGrammarAndTone(
+  apiKey: string,
+  source: string
+): Promise<GrammarResult> {
+  const prompt = `You are an expert resume writing coach specializing in ATS optimization and power verbs.
+
+TASK: Analyze the resume below and improve weak bullet points.
+
+RULES:
+1. Replace weak verbs (did, made, helped, worked on, responsible for, assisted) with power verbs (orchestrated, spearheaded, architected, engineered, optimized, championed).
+2. Add quantifiable metrics where possible (e.g., "by 40%", "serving 10K+ users").
+3. Keep the LaTeX DSL commands intact (\\bullet{}, \\job{}, etc.).
+4. Do NOT change names, dates, company names, or factual information.
+5. Only improve bullet text inside \\bullet{} or \\item{} commands.
+
+RESUME:
+\`\`\`
+${source}
+\`\`\`
+
+Return a JSON object inside [RESULT] tags:
+[RESULT]
+{
+  "improvedSource": "...full modified DSL...",
+  "changes": [
+    {"original": "Worked on backend APIs", "improved": "Engineered scalable backend APIs", "reason": "Replaced weak verb 'worked on'"}
+  ],
+  "score": 85
+}
+[/RESULT]`;
+
+  try {
+    const res = await callAI(apiKey, prompt);
+    const match = res.match(/\[RESULT\]\s*([\s\S]*?)(?:\[\/RESULT\]|$)/i);
+    if (match) {
+      // Clean potential issues with backslashes in JSON
+      const cleaned = match[1].trim().replace(/\\\\/g, "\\\\");
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        // If JSON parse fails, return source unchanged
+        return { improvedSource: source, changes: [], score: 70 };
+      }
+    }
+    return { improvedSource: source, changes: [], score: 70 };
+  } catch (error) {
+    console.error("Grammar Check Error:", error);
+    return { improvedSource: source, changes: [], score: 0 };
+  }
+}
+
+// ─── Neural Chat Copilot ───────────────────────────────────────────────────
+
+export async function neuralChat(
+  apiKey: string,
+  currentSource: string,
+  userMessage: string,
+  history: { role: "user" | "assistant"; content: string }[] = []
+): Promise<{ updatedSource: string; assistantMessage: string }> {
+  const prompt = `You are "Neural Copilot", a professional resume architect.
+  
+  CONTEXT:
+  The user is editing their resume in a custom DSL format.
+  
+  CURRENT RESUME SOURCE:
+  \`\`\`
+  ${currentSource}
+  \`\`\`
+  
+  USER COMMAND: "${userMessage}"
+  
+  INSTRUCTIONS:
+  1. Analyze the user's request. They might want to add a project, change a role, translate text, or fix something.
+  2. If the request requires changing the resume, provide the COMPLETE updated DSL source.
+  3. If the request is just a question, answer it professionally.
+  4. Always maintain the DSL syntax (\\name, \\role, \\job, \\bullet, \\skillgroup, etc.).
+  5. Respond using this exact structure:
+  
+  [MESSAGE]
+  (Your professional response to the user here)
+  [/MESSAGE]
+  
+  [SOURCE]
+  (The complete updated DSL source code here. If no changes were needed, return the original source.)
+  [/SOURCE]`;
+
+  try {
+    const text = await callAI(apiKey, prompt);
+    const messageMatch = text.match(/\[MESSAGE\]([\s\S]*?)\[\/MESSAGE\]/i);
+    const sourceMatch = text.match(/\[SOURCE\]([\s\S]*?)\[\/SOURCE\]/i);
+
+    const assistantMessage = messageMatch ? messageMatch[1].trim() : "I've updated your resume based on your request.";
+    let updatedSource = sourceMatch ? sourceMatch[1].trim() : currentSource;
+
+    // Cleanup source markdown
+    updatedSource = updatedSource
+      .replace(/^```[a-zA-Z]*\n?/, "")
+      .replace(/\n?```$/, "")
+      .trim();
+
+    return {
+      updatedSource: updatedSource || currentSource,
+      assistantMessage
+    };
+  } catch (error: any) {
+    console.error("Neural Chat Error:", error);
+    throw error;
   }
 }

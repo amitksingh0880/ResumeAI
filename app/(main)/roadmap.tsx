@@ -18,9 +18,21 @@ import { parseResumeDSL } from "@/services/dslParser";
 import { generateCareerRoadmap, type CareerStep } from "@/services/aiService";
 import { LucideCheckCircle2 } from "lucide-react-native";
 
+import { Theme, type AppTheme } from "@/constants/Theme";
+import { getSettings } from "@/services/storageService";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+
 export default function RoadmapScreen() {
   const [loading, setLoading] = useState(false);
   const [roadmap, setRoadmap] = useState<{ steps: CareerStep[]; summary: string } | null>(null);
+  const [theme, setTheme] = useState<AppTheme>(Theme.dark);
+
+  useFocusEffect(
+    useCallback(() => {
+      getSettings().then(s => setTheme(Theme[s.appearance]));
+    }, [])
+  );
 
   useEffect(() => {
     handleGenerate();
@@ -55,55 +67,65 @@ export default function RoadmapScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Header */}
-      <View style={{ flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderColor: "#1F1F1F" }}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={{ marginRight: 16 }}>
-          <Text style={{ color: "#00F0FF", fontSize: 14, fontWeight: "700" }}>← Back</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, borderColor: theme.border }}>
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(main)/dashboard");
+            }
+          }} 
+          activeOpacity={0.7} 
+          style={{ marginRight: 16 }}
+        >
+          <Text style={{ color: theme.accent, fontSize: 14, fontWeight: "700" }}>← Back</Text>
         </TouchableOpacity>
         <View>
-          <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>NEURAL PATH</Text>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: "#FFFFFF" }}>Career Roadmap</Text>
+          <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>STUDIO PATH</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: theme.textPrimary }}>Career Roadmap</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {loading ? (
           <View style={{ alignItems: "center", paddingTop: 100 }}>
-            <ActivityIndicator size="large" color="#00F0FF" />
-            <Text style={{ color: "#444", marginTop: 16, fontSize: 12, fontWeight: "800", letterSpacing: 1 }}>
+            <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={{ color: theme.textSecondary, marginTop: 16, fontSize: 12, fontWeight: "800", letterSpacing: 1 }}>
               CALCULATING TRAJECTORY...
             </Text>
           </View>
         ) : roadmap ? (
           <>
             {/* Market Outlook */}
-            <View style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 20, marginBottom: 28 }}>
-              <Text style={{ color: "#8B5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 8 }}>MARKET OUTLOOK</Text>
-              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 8 }}>Strategic Analysis</Text>
-              <Text style={{ color: "#8E8E93", fontSize: 13, lineHeight: 20 }}>{roadmap.summary}</Text>
+            <View style={{ backgroundColor: theme.card, borderRadius: 8, borderWidth: 1, borderColor: theme.border, padding: 20, marginBottom: 28 }}>
+              <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 8 }}>MARKET OUTLOOK</Text>
+              <Text style={{ color: theme.textPrimary, fontSize: 15, fontWeight: "800", marginBottom: 8 }}>Strategic Analysis</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13, lineHeight: 20 }}>{roadmap.summary}</Text>
             </View>
 
-            <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 16 }}>EVOLUTIONARY PHASES</Text>
+            <Text style={{ color: theme.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 16 }}>EVOLUTIONARY PHASES</Text>
 
             {roadmap.steps.map((step, i) => (
               <View key={i} style={{
-                backgroundColor: "#121212", borderRadius: 8, padding: 20,
-                borderWidth: 1, borderColor: i === 0 ? "#00F0FF" : "#1F1F1F",
+                backgroundColor: theme.card, borderRadius: 8, padding: 20,
+                borderWidth: 1, borderColor: i === 0 ? theme.accent : theme.border,
                 marginBottom: 16,
               }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <View style={{ backgroundColor: i === 0 ? "rgba(0,240,255,0.1)" : "#1A1A1A", borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: i === 0 ? "#00F0FF" : "#2A2A2A" }}>
-                    <Text style={{ color: i === 0 ? "#00F0FF" : "#8E8E93", fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>PHASE 0{i + 1}</Text>
+                  <View style={{ backgroundColor: i === 0 ? theme.accent + "15" : theme.surface, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: i === 0 ? theme.accent : theme.border }}>
+                    <Text style={{ color: i === 0 ? theme.accent : theme.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>PHASE 0{i + 1}</Text>
                   </View>
                 </View>
-                <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "800", marginBottom: 6 }}>{step.role.toUpperCase()}</Text>
-                <Text style={{ color: "#8E8E93", fontSize: 13, marginBottom: 16, lineHeight: 18 }}>{step.description}</Text>
+                <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: "800", marginBottom: 6 }}>{step.role.toUpperCase()}</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>{step.description}</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                   {step.skillsNeeded.map((skill, si) => (
-                    <View key={si} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#1A1A1A", borderRadius: 4, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "#2A2A2A" }}>
-                      <LucideCheckCircle2 color="#34C759" size={12} style={{ marginRight: 6 }} />
-                      <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "600" }}>{skill.toUpperCase()}</Text>
+                    <View key={si} style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.surface, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: theme.border }}>
+                      <LucideCheckCircle2 color={theme.success} size={12} style={{ marginRight: 6 }} />
+                      <Text style={{ color: theme.textPrimary, fontSize: 11, fontWeight: "600" }}>{skill.toUpperCase()}</Text>
                     </View>
                   ))}
                 </View>
@@ -115,7 +137,7 @@ export default function RoadmapScreen() {
               activeOpacity={0.7}
               style={{ paddingVertical: 16, alignItems: "center", marginTop: 8, marginBottom: 40 }}
             >
-              <Text style={{ color: "#00F0FF", fontSize: 13, fontWeight: "800", letterSpacing: 1 }}>✦ RE-CALCULATE PATH</Text>
+              <Text style={{ color: theme.accent, fontSize: 13, fontWeight: "800", letterSpacing: 1 }}>✦ RE-CALCULATE PATH</Text>
             </TouchableOpacity>
           </>
         ) : null}

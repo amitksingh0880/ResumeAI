@@ -165,8 +165,20 @@ export function renderJakesCV(ast: ResumeAST): string {
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${BASE_CSS}${css}</style></head><body>
     <div class="header">
-      <h1>${ast.name}</h1>
-      <div class="contact">${renderContact(ast, "<span>|</span>")}</div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="flex: 1; margin-left: ${ast.qrcode ? '80px' : '0'};">
+          <h1>${ast.name}</h1>
+          <div class="contact">${renderContact(ast, "<span>|</span>")}</div>
+        </div>
+        ${ast.qrcode ? `
+        <div style="width: 70px; text-align: center;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(ast.qrcode)}" 
+               style="width: 60px; height: 60px; border: 1px solid #eee; padding: 2px;" 
+               alt="QR Code" />
+          <div style="font-size: 7px; color: #888; margin-top: 2px; font-weight: bold; letter-spacing: 0.5px;">SCAN ME</div>
+        </div>
+        ` : ""}
+      </div>
     </div>
     ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
     ${sections}
@@ -222,10 +234,20 @@ export function renderAwesomeCV(ast: ResumeAST, accentColor = "#00ADB5"): string
   }).join("");
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${BASE_CSS}${css}</style></head><body>
-    <div class="header">
-      <h1>${ast.name}</h1>
-      <div class="role">${ast.role}</div>
-      <div class="contact">${renderContact(ast, "  ·  ")}</div>
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1>${ast.name}</h1>
+        <div class="role">${ast.role}</div>
+        <div class="contact">${renderContact(ast, "  ·  ")}</div>
+      </div>
+      ${ast.qrcode ? `
+      <div style="background: white; padding: 6px; border-radius: 4px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(ast.qrcode)}" 
+             style="width: 50px; height: 50px; display: block;" 
+             alt="QR Code" />
+        <div style="font-size: 6px; color: #333; margin-top: 4px; font-weight: bold;">PORTFOLIO</div>
+      </div>
+      ` : ""}
     </div>
     <div class="body">
       ${ast.summary ? `<div class="summary">${formatText(ast.summary)}</div>` : ""}
@@ -605,10 +627,12 @@ export function getTemplate(id: string): TemplateInfo {
 }
 
 export function renderTemplate(id: string, ast: ResumeAST, customCSS?: string): string {
-  if (customCSS && (id === "legacy-style" || id === "pdf-replica" || id === "elite-latex")) {
-    const base = id === "elite-latex" ? renderEliteLaTeX(ast) : renderClassicPDF(ast);
-    return base.replace("</style>", `${customCSS}</style>`);
-  }
   const html = getTemplate(id).render(ast);
-  return html.replace("</body>", `${INJECTED_JS}</body>`);
+  let finalHtml = html.replace("</body>", `${INJECTED_JS}</body>`);
+  
+  if (customCSS) {
+    finalHtml = finalHtml.replace("</style>", `\n/* User Custom CSS */\n${customCSS}\n</style>`);
+  }
+  
+  return finalHtml;
 }

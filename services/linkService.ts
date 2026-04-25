@@ -126,6 +126,12 @@ export function extractLinkableItems(source: string): LinkableItem[] {
     }
   }
 
+  // 7. Extract QR Code
+  const qrRegex = /\\qrcode\s*{([^}]+)}/g;
+  while ((match = qrRegex.exec(source)) !== null) {
+    addItem("Portfolio / Website QR", "other", "QR Code", match[1].trim());
+  }
+
   return items;
 }
 
@@ -161,9 +167,66 @@ export function upsertLink(source: string, label: string, url: string): string {
  * Remove a link for a label — unwrap \link{url}{label} back to just label
  */
 export function removeLink(source: string, label: string): string {
+  if (label === "Portfolio / Website QR") {
+    return source.replace(/\\qrcode\s*{[^}]+}/g, "");
+  }
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const linkPattern = new RegExp(`\\\\link\\s*{[^}]+}\\s*{${escaped}}`, "g");
   return source.replace(linkPattern, label);
+}
+
+/**
+ * Add or update a QR code in the source.
+ */
+export function upsertQRCode(source: string, url: string): string {
+  if (source.includes("\\qrcode{")) {
+    return source.replace(/\\qrcode\s*{[^}]+}/, `\\qrcode{${url}}`);
+  }
+  // Insert after the name/role/contact section or at the start
+  if (source.includes("\\summary{")) {
+    return source.replace(/(\\summary\s*{[^}]+})/, `$1\n\\qrcode{${url}}`);
+  }
+  return source.replace(/(\\resumestart)/, `$1\n\\qrcode{${url}}`);
+}
+
+/**
+ * Move a section up or down in the DSL.
+ */
+export function moveSection(source: string, sectionTitle: string, direction: "up" | "down"): string {
+  const lines = source.split("\n");
+  const sections: { title: string; start: number; end: number }[] = [];
+  
+  let current: { title: string; start: number; end: number } | null = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("\\section{")) {
+      if (current) current.end = i - 1;
+      const title = lines[i].match(/\\section{([^}]+)}/)?.[1] || "";
+      current = { title, start: i, end: lines.length - 1 };
+      sections.push(current);
+    }
+  }
+  
+  const idx = sections.findIndex(s => s.title === sectionTitle);
+  if (idx === -1) return source;
+  
+  const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (targetIdx < 0 || targetIdx >= sections.length) return source;
+  
+  const s1 = sections[idx];
+  const s2 = sections[targetIdx];
+  
+  const lines1 = lines.slice(s1.start, s1.end + 1);
+  const lines2 = lines.slice(s2.start, s2.end + 1);
+  
+  const newLines = [...lines];
+  if (direction === "up") {
+    newLines.splice(s2.start, (s1.end - s2.start) + 1, ...lines1, ...lines2);
+  } else {
+    newLines.splice(s1.start, (s2.end - s1.start) + 1, ...lines2, ...lines1);
+  }
+  
+  return newLines.join("\n");
 }
 
 /**

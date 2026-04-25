@@ -19,6 +19,8 @@ import {
   type ResumeDocument,
 } from "@/services/storageService";
 import { parseResumeDSL } from "@/services/dslParser";
+import { Theme, type AppTheme } from "@/constants/Theme";
+import { getSettings } from "@/services/storageService";
 import {
   LucideZap,
   LucideFileText,
@@ -29,6 +31,8 @@ import {
   LucideTrash2,
   LucideSquare,
   LucideCheckSquare,
+  LucideFileSignature,
+  LucideSpellCheck,
 } from "lucide-react-native";
 
 export default function DashboardScreen() {
@@ -36,12 +40,14 @@ export default function DashboardScreen() {
   const [allDocs, setAllDocs] = useState<ResumeDocument[]>([]);
   const [skillCount, setSkillCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [theme, setTheme] = useState<AppTheme>(Theme.dark);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
+      getSettings().then(s => setTheme(Theme[s.appearance]));
     }, [])
   );
 
@@ -152,140 +158,227 @@ export default function DashboardScreen() {
   const score = skillCount > 0 ? Math.min(60 + skillCount * 2, 99) : 85;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 32, marginTop: 10 }}>
           <View>
-            <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2 }}>COMMAND CENTER</Text>
-            <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "800", marginTop: 4 }}>Welcome back</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ width: 12, height: 2, backgroundColor: theme.accent, borderRadius: 1 }} />
+              <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2, textTransform: "uppercase" }}>Studio Intelligence</Text>
+            </View>
+            <Text style={{ color: theme.textPrimary, fontSize: 28, fontWeight: "800", marginTop: 4, letterSpacing: -0.5 }}>Command Center</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push("/(main)/settings")}
-            style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: "#1A1A1A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#2A2A2A" }}
+            activeOpacity={0.7}
+            style={{ 
+              width: 48, height: 48, borderRadius: 14, 
+              backgroundColor: theme.card, alignItems: "center", justifyContent: "center", 
+              borderWidth: 1, borderColor: theme.border,
+              shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8
+            }}
           >
-            <LucideSettings color="#FFFFFF" size={20} />
+            <LucideSettings color={theme.textPrimary} size={22} />
           </TouchableOpacity>
         </View>
 
         {/* ── AI Health Matrix ── */}
-        <View style={{ backgroundColor: "rgba(18,18,18,0.9)", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 20, marginBottom: 20 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
+        <View style={{ 
+          backgroundColor: theme.card, borderRadius: 20, borderWidth: 1, borderColor: theme.border, 
+          padding: 24, marginBottom: 28,
+          shadowColor: theme.glow, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20
+        }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 24 }}>
             <View>
-              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "800" }}>Neural Matrix</Text>
-              <Text style={{ color: "#8E8E93", fontSize: 11, marginTop: 2 }}>Portfolio Optimization</Text>
+              <Text style={{ color: theme.textPrimary, fontSize: 18, fontWeight: "800" }}>Portfolio Matrix</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>Real-time Optimization Score</Text>
             </View>
-            <View style={{ backgroundColor: "#00F0FF", borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4 }}>
-              <Text style={{ color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>ACTIVE</Text>
+            <View style={{ 
+              backgroundColor: theme.accentMuted, borderRadius: 6, paddingHorizontal: 12, height: 26, 
+              justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: theme.accent + "33" 
+            }}>
+              <Text style={{ color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>SYSTEM ACTIVE</Text>
             </View>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
-            <View style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 6, borderColor: "#1A1A1A", borderTopColor: "#00F0FF", borderRightColor: "#00F0FF", alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900" }}>{score}</Text>
-              <Text style={{ color: "#00F0FF", fontSize: 8, fontWeight: "800" }}>SCORE</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "700", marginBottom: 4 }}>KEYWORD DENSITY</Text>
-              <View style={{ height: 4, backgroundColor: "#1A1A1A", borderRadius: 2, marginBottom: 12 }}>
-                <View style={{ height: 4, backgroundColor: "#00F0FF", borderRadius: 2, width: "92%" }} />
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 32 }}>
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <View style={{ 
+                width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: theme.border,
+                alignItems: "center", justifyContent: "center",
+                shadowColor: theme.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 15
+              }}>
+                <View style={{ 
+                  position: "absolute", width: 100, height: 100, borderRadius: 50, 
+                  borderWidth: 4, borderColor: theme.accent, borderTopColor: "transparent", borderLeftColor: "transparent",
+                  transform: [{ rotate: "45deg" }]
+                }} />
+                <Text style={{ color: theme.textPrimary, fontSize: 32, fontWeight: "900" }}>{score}</Text>
+                <Text style={{ color: theme.accent, fontSize: 9, fontWeight: "900", letterSpacing: 1 }}>INDEX</Text>
               </View>
-              <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "700", marginBottom: 4 }}>READABILITY</Text>
-              <View style={{ height: 4, backgroundColor: "#1A1A1A", borderRadius: 2 }}>
-                <View style={{ height: 4, backgroundColor: "#8B5CF6", borderRadius: 2, width: "78%" }} />
+            </View>
+
+            <View style={{ flex: 1, gap: 16 }}>
+              <View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                  <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 }}>KEYWORD DENSITY</Text>
+                  <Text style={{ color: theme.textPrimary, fontSize: 10, fontWeight: "900" }}>92%</Text>
+                </View>
+                <View style={{ height: 6, backgroundColor: theme.surface, borderRadius: 3, overflow: "hidden" }}>
+                  <View style={{ height: "100%", backgroundColor: theme.accent, width: "92%" }} />
+                </View>
+              </View>
+
+              <View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                  <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 }}>SYSTEM READABILITY</Text>
+                  <Text style={{ color: theme.textPrimary, fontSize: 10, fontWeight: "900" }}>78%</Text>
+                </View>
+                <View style={{ height: 6, backgroundColor: theme.surface, borderRadius: 3, overflow: "hidden" }}>
+                  <View style={{ height: "100%", backgroundColor: theme.accent, width: "78%" }} />
+                </View>
               </View>
             </View>
           </View>
         </View>
 
-        {/* ── Quick Actions ── */}
-        <View style={{ flexDirection: "row", marginBottom: 24, gap: 12 }}>
-          <TouchableOpacity
-            onPress={() => router.push("/(main)/editor")}
-            style={{ flex: 1, backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16, alignItems: "center" }}
-            activeOpacity={0.7}
-          >
-            <LucideFileText color="#00F0FF" size={22} />
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "800", marginTop: 8, letterSpacing: 1 }}>EDITOR</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/(main)/match")}
-            style={{ flex: 1, backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16, alignItems: "center" }}
-            activeOpacity={0.7}
-          >
-            <LucideTarget color="#8B5CF6" size={22} />
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "800", marginTop: 8, letterSpacing: 1 }}>JOB MATCH</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/(main)/roadmap")}
-            style={{ flex: 1, backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16, alignItems: "center" }}
-            activeOpacity={0.7}
-          >
-            <LucideZap color="#FFD60A" size={22} />
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "800", marginTop: 8, letterSpacing: 1 }}>ROADMAP</Text>
-          </TouchableOpacity>
+        {/* ── Quick Actions Grid ── */}
+        <View style={{ marginBottom: 32 }}>
+          <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 16, paddingLeft: 4 }}>OPERATIONAL TASKS</Text>
+          <View style={{ gap: 12 }}>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <ActionCard 
+                icon={<LucideFileText color={theme.accent} size={24} />} 
+                label="EDITOR" 
+                sub="Source View"
+                onPress={() => router.push("/(main)/editor")}
+                theme={theme}
+              />
+              <ActionCard 
+                icon={<LucideTarget color={theme.accent} size={24} />} 
+                label="JOB MATCH" 
+                sub="ATS Scan"
+                onPress={() => router.push("/(main)/match")}
+                theme={theme}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <ActionCard 
+                icon={<LucideFileSignature color={theme.accent} size={24} />} 
+                label="COVER LETTER" 
+                sub="AI Content"
+                onPress={() => router.push("/(main)/cover-letter")}
+                theme={theme}
+              />
+              <ActionCard 
+                icon={<LucideZap color={theme.accent} size={24} />} 
+                label="ROADMAP" 
+                sub="Career Path"
+                onPress={() => router.push("/(main)/roadmap")}
+                theme={theme}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <ActionCard 
+                icon={<LucideSpellCheck color={theme.accent} size={24} />} 
+                label="GRAMMAR" 
+                sub="AI Audit"
+                onPress={() => router.push("/(main)/grammar")}
+                theme={theme}
+              />
+              <ActionCard 
+                icon={<LucideFileText color={theme.accent} size={24} />} 
+                label="VERSIONS" 
+                sub="Snapshots"
+                onPress={() => router.push("/(main)/versions")}
+                theme={theme}
+              />
+            </View>
+          </View>
         </View>
 
         {/* ── Active Repository ── */}
-        <View style={{ marginBottom: 24 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>ACTIVE REPOSITORY</Text>
+        <View style={{ marginBottom: 32 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingHorizontal: 4 }}>
+            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 2 }}>ACTIVE REPOSITORY</Text>
             <TouchableOpacity onPress={() => router.push("/(main)/editor")} activeOpacity={0.7}>
-              <Text style={{ color: "#00F0FF", fontSize: 11, fontWeight: "700" }}>OPEN →</Text>
+              <Text style={{ color: theme.accent, fontSize: 11, fontWeight: "800" }}>VIEW ALL →</Text>
             </TouchableOpacity>
           </View>
 
           {doc ? (
             <TouchableOpacity
               onPress={() => router.push("/(main)/editor")}
-              activeOpacity={0.8}
-              style={{ backgroundColor: "rgba(18,18,18,0.9)", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 16 }}
+              activeOpacity={0.9}
+              style={{ 
+                backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.border, 
+                padding: 20, flexDirection: "row", alignItems: "center",
+                shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12
+              }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View style={{ width: 44, height: 56, borderRadius: 4, backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#333", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-                  <LucideFileText color="#00F0FF" size={22} />
+              <View style={{ 
+                width: 50, height: 64, borderRadius: 8, backgroundColor: theme.surface, 
+                borderWidth: 1, borderColor: theme.border, alignItems: "center", justifyContent: "center", marginRight: 16 
+              }}>
+                <LucideFileText color={theme.accent} size={24} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.textPrimary, fontSize: 16, fontWeight: "800", letterSpacing: -0.2 }} numberOfLines={1}>{doc.title.toUpperCase()}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.success, marginRight: 8, shadowColor: theme.success, shadowRadius: 4, shadowOpacity: 0.5 }} />
+                  <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: "600" }}>
+                    {skillCount} Tech Nodes · v{doc.versions?.length ?? 1}
+                  </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }} numberOfLines={1}>{doc.title.toUpperCase()}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#34C759", marginRight: 6 }} />
-                    <Text style={{ color: "#8E8E93", fontSize: 11 }}>
-                      {skillCount} SKILLS · v{doc.versions?.length ?? 1}
-                    </Text>
-                  </View>
-                </View>
-                <LucideChevronRight color="#00F0FF" size={20} />
+              </View>
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.surface, alignItems: "center", justifyContent: "center" }}>
+                <LucideChevronRight color={theme.accent} size={18} />
               </View>
             </TouchableOpacity>
           ) : (
-            <View style={{ backgroundColor: "#121212", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 32, alignItems: "center" }}>
-              <LucideFileText color="#333" size={40} />
-              <Text style={{ color: "#444", fontSize: 12, fontWeight: "700", textAlign: "center", marginTop: 12 }}>NO RESUME FOUND</Text>
-            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/(onboarding)/import")}
+              activeOpacity={0.7}
+              style={{ backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.border, padding: 32, alignItems: "center", borderStyle: "dashed" }}
+            >
+              <LucidePlus color={theme.textMuted} size={32} />
+              <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: "800", textAlign: "center", marginTop: 12 }}>INITIALIZE FIRST REPOSITORY</Text>
+            </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            onPress={() => router.push("/(onboarding)/import")}
-            activeOpacity={0.7}
-            style={{ marginTop: 10, borderRadius: 4, borderWidth: 1, borderColor: "#1F1F1F", padding: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
-          >
-            <LucidePlus color="#FFFFFF" size={18} />
-            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "800", letterSpacing: 1 }}>NEW RESUME</Text>
-          </TouchableOpacity>
+          {!doc && (
+            <TouchableOpacity
+              onPress={() => router.push("/(onboarding)/import")}
+              activeOpacity={0.7}
+              style={{ 
+                marginTop: 12, borderRadius: 12, backgroundColor: theme.accent, 
+                padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10,
+                shadowColor: theme.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8
+              }}
+            >
+              <LucidePlus color="#000" size={20} />
+              <Text style={{ color: "#000", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>CREATE NEW RESUME</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── All Resumes ── */}
         {allDocs.length > 0 && (
           <View style={{ marginBottom: 24 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>
+              <Text style={{ color: theme.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>
                 {isEditMode ? `SELECTED (${selectedIds.length})` : "ALL REPOSITORIES"}
               </Text>
               
               <View style={{ flexDirection: "row", gap: 12 }}>
                 {isEditMode && (
                   <TouchableOpacity onPress={handleSelectAll}>
-                    <Text style={{ color: "#00F0FF", fontSize: 11, fontWeight: "700" }}>
+                    <Text style={{ color: theme.accent, fontSize: 11, fontWeight: "700" }}>
                       {selectedIds.length === allDocs.length ? "DESELECT ALL" : "SELECT ALL"}
                     </Text>
                   </TouchableOpacity>
@@ -294,7 +387,7 @@ export default function DashboardScreen() {
                   setIsEditMode(!isEditMode);
                   setSelectedIds([]);
                 }}>
-                  <Text style={{ color: isEditMode ? "#FF3B30" : "#00F0FF", fontSize: 11, fontWeight: "700" }}>
+                  <Text style={{ color: isEditMode ? theme.danger : theme.accent, fontSize: 11, fontWeight: "700" }}>
                     {isEditMode ? "CANCEL" : "SELECT"}
                   </Text>
                 </TouchableOpacity>
@@ -305,9 +398,9 @@ export default function DashboardScreen() {
               <View
                 key={d.id}
                 style={{
-                  backgroundColor: selectedIds.includes(d.id) ? "rgba(0,240,255,0.05)" : "#121212",
+                  backgroundColor: selectedIds.includes(d.id) ? theme.accent + "10" : theme.card,
                   borderRadius: 8, borderWidth: 1,
-                  borderColor: selectedIds.includes(d.id) ? "#00F0FF" : "#1F1F1F",
+                  borderColor: selectedIds.includes(d.id) ? theme.accent : theme.border,
                   marginBottom: 8, flexDirection: "row", alignItems: "center"
                 }}
               >
@@ -319,21 +412,21 @@ export default function DashboardScreen() {
                   {isEditMode ? (
                     <View style={{ marginRight: 12 }}>
                       {selectedIds.includes(d.id) ? (
-                        <LucideCheckSquare color="#00F0FF" size={18} />
+                        <LucideCheckSquare color={theme.accent} size={18} />
                       ) : (
-                        <LucideSquare color="#444" size={18} />
+                        <LucideSquare color={theme.textMuted} size={18} />
                       )}
                     </View>
                   ) : (
-                    <LucideFileText color={doc?.id === d.id ? "#00F0FF" : "#444"} size={16} />
+                    <LucideFileText color={doc?.id === d.id ? theme.accent : theme.textMuted} size={16} />
                   )}
                   
                   <View style={{ marginLeft: isEditMode ? 0 : 12, flex: 1 }}>
-                    <Text style={{ color: doc?.id === d.id || selectedIds.includes(d.id) ? "#FFFFFF" : "#8E8E93", fontSize: 13, fontWeight: "700" }}>{d.title}</Text>
+                    <Text style={{ color: doc?.id === d.id || selectedIds.includes(d.id) ? theme.textPrimary : theme.textSecondary, fontSize: 13, fontWeight: "700" }}>{d.title}</Text>
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
-                      <Text style={{ color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>{d.templateId.toUpperCase()}</Text>
-                      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#333", marginHorizontal: 6 }} />
-                      <Text style={{ color: "#444", fontSize: 9, fontWeight: "900" }}>
+                      <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>{d.templateId.toUpperCase()}</Text>
+                      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: theme.border, marginHorizontal: 6 }} />
+                      <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: "900" }}>
                         {new Date(d.createdAt).toLocaleDateString()}
                       </Text>
                     </View>
@@ -346,11 +439,11 @@ export default function DashboardScreen() {
                     style={{ padding: 12, marginRight: 4 }}
                     activeOpacity={0.7}
                   >
-                    <LucideTrash2 color="#FF3B30" size={16} />
+                    <LucideTrash2 color={theme.danger} size={16} />
                   </TouchableOpacity>
                 )}
 
-                {doc?.id === d.id && !isEditMode && <View style={{ width: 4, height: 24, backgroundColor: "#00F0FF", borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />}
+                {doc?.id === d.id && !isEditMode && <View style={{ width: 4, height: 24, backgroundColor: theme.accent, borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />}
               </View>
             ))}
 
@@ -359,7 +452,7 @@ export default function DashboardScreen() {
                 onPress={handleBulkDelete}
                 activeOpacity={0.8}
                 style={{
-                  backgroundColor: "#FF3B30",
+                  backgroundColor: theme.danger,
                   borderRadius: 4, paddingVertical: 14,
                   alignItems: "center", marginTop: 8
                 }}
@@ -374,26 +467,26 @@ export default function DashboardScreen() {
 
         {/* ── Neural Activity ── */}
         <View style={{ marginBottom: 24 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>NEURAL ACTIVITY</Text>
-          <View style={{ backgroundColor: "transparent", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 20 }}>
+          <Text style={{ color: theme.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 }}>NEURAL ACTIVITY</Text>
+          <View style={{ backgroundColor: "transparent", borderRadius: 8, borderWidth: 1, borderColor: theme.border, padding: 20 }}>
             <View style={{ flexDirection: "row", marginBottom: 20 }}>
-              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,240,255,0.1)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-                <LucideTarget color="#00F0FF" size={12} />
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.accent + "15", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                <LucideTarget color={theme.accent} size={12} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>RESUME VIEWED</Text>
-                <Text style={{ color: "#8E8E93", fontSize: 11, marginTop: 2 }}>Recruiter from Stripe viewed your Product Designer profile.</Text>
-                <Text style={{ color: "#444", fontSize: 9, fontWeight: "800", marginTop: 4 }}>24 MIN AGO</Text>
+                <Text style={{ color: theme.textPrimary, fontSize: 13, fontWeight: "700" }}>RESUME VIEWED</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }}>Recruiter from Stripe viewed your Product Designer profile.</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: "800", marginTop: 4 }}>24 MIN AGO</Text>
               </View>
             </View>
             <View style={{ flexDirection: "row" }}>
-              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(139,92,246,0.1)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-                <LucideZap color="#8B5CF6" size={12} />
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.accent + "15", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                <LucideZap color={theme.accent} size={12} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>AI REWRITE COMPLETE</Text>
-                <Text style={{ color: "#8E8E93", fontSize: 11, marginTop: 2 }}>Experience section optimized for Google Senior Role.</Text>
-                <Text style={{ color: "#444", fontSize: 9, fontWeight: "800", marginTop: 4 }}>2 HOURS AGO</Text>
+                <Text style={{ color: theme.textPrimary, fontSize: 13, fontWeight: "700" }}>AI REWRITE COMPLETE</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }}>Experience section optimized for Google Senior Role.</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 9, fontWeight: "800", marginTop: 4 }}>2 HOURS AGO</Text>
               </View>
             </View>
           </View>
@@ -404,19 +497,43 @@ export default function DashboardScreen() {
           <TouchableOpacity
             onPress={() => router.push("/(main)/skills")}
             activeOpacity={0.8}
-            style={{ marginBottom: 40, backgroundColor: "rgba(18,18,18,0.9)", borderRadius: 8, borderWidth: 1, borderColor: "#1F1F1F", padding: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+            style={{ marginBottom: 40, backgroundColor: theme.card, borderRadius: 8, borderWidth: 1, borderColor: theme.border, padding: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
           >
             <View>
-              <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "800", letterSpacing: 1 }}>YOUR TECH STACK</Text>
-              <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginTop: 4 }}>
-                {skillCount} <Text style={{ color: "#00F0FF" }}>Skills</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: "800", letterSpacing: 1 }}>YOUR TECH STACK</Text>
+              <Text style={{ color: theme.textPrimary, fontSize: 20, fontWeight: "900", marginTop: 4 }}>
+                {skillCount} <Text style={{ color: theme.accent }}>Skills</Text>
               </Text>
             </View>
-            <LucideChevronRight color="#00F0FF" size={24} />
+            <LucideChevronRight color={theme.accent} size={24} />
           </TouchableOpacity>
         )}
 
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function ActionCard({ icon, label, sub, onPress, theme }: { icon: any, label: string, sub: string, onPress: () => void, theme: AppTheme }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={{ 
+        flex: 1, backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.border, 
+        padding: 18, alignItems: "flex-start",
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6
+      }}
+    >
+      <View style={{ 
+        width: 44, height: 44, borderRadius: 10, backgroundColor: theme.surface, 
+        alignItems: "center", justifyContent: "center", marginBottom: 12,
+        borderWidth: 1, borderColor: theme.border
+      }}>
+        {icon}
+      </View>
+      <Text style={{ color: theme.textPrimary, fontSize: 13, fontWeight: "800", letterSpacing: 0.5 }}>{label}</Text>
+      <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: "600", marginTop: 2 }}>{sub}</Text>
+    </TouchableOpacity>
   );
 }

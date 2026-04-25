@@ -10,7 +10,7 @@ import {
   getImportDraftCSS,
   getImportDraftFilename,
 } from "@/services/storageService";
-import { LucideChevronLeft, LucideLayout, LucideCheckCircle2 } from "lucide-react-native";
+import { LucideChevronLeft, LucideLayout, LucideCheckCircle2, LucideArrowRight } from "lucide-react-native";
 
 export default function TemplatePickerScreen() {
   const [source, setSource] = useState("");
@@ -52,14 +52,14 @@ export default function TemplatePickerScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050206" }}>
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24, flexDirection: "row", alignItems: "center" }} activeOpacity={0.7}>
-          <LucideChevronLeft color="#00F0FF" size={20} />
-          <Text style={{ color: "#00F0FF", fontSize: 14, fontWeight: "700", marginLeft: 4 }}>Back</Text>
+          <LucideChevronLeft color="#9A8174" size={20} />
+          <Text style={{ color: "#9A8174", fontSize: 14, fontWeight: "700", marginLeft: 4 }}>Back</Text>
         </TouchableOpacity>
 
-        <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>SELECT ARCHITECTURE</Text>
+        <Text style={{ color: "#9A8174", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>STUDIO ARCHITECTURE</Text>
         <Text style={{ fontSize: 26, fontWeight: "900", color: "#FFFFFF", marginBottom: 6 }}>Choose Template</Text>
         <Text style={{ fontSize: 13, color: "#8E8E93", marginBottom: 28, lineHeight: 20 }}>
           Your data is decoupled from the design. Switch layouts instantly without affecting your resume source code.
@@ -72,9 +72,9 @@ export default function TemplatePickerScreen() {
               onPress={() => setSelected(t.id)}
               activeOpacity={0.7}
               style={{
-                backgroundColor: selected === t.id ? "rgba(0, 240, 255, 0.05)" : "#121212",
+                backgroundColor: selected === t.id ? "rgba(154, 129, 116, 0.05)" : "#121212",
                 borderRadius: 8, borderWidth: 1.5,
-                borderColor: selected === t.id ? "#00F0FF" : "#1F1F1F",
+                borderColor: selected === t.id ? "#9A8174" : "#1F1F1F",
                 padding: 16, flexDirection: "row", alignItems: "center",
                 marginBottom: 12,
               }}
@@ -96,7 +96,7 @@ export default function TemplatePickerScreen() {
                 <Text style={{ fontSize: 12, color: "#8E8E93", lineHeight: 18 }}>{t.description}</Text>
               </View>
               {selected === t.id && (
-                <LucideCheckCircle2 color="#00F0FF" size={20} />
+                <LucideCheckCircle2 color="#9A8174" size={20} />
               )}
             </TouchableOpacity>
           ))}
@@ -107,17 +107,20 @@ export default function TemplatePickerScreen() {
           disabled={loading || creating || !source}
           activeOpacity={0.8}
           style={{ 
-            backgroundColor: (loading || !source) ? "#1A1A1A" : "#00F0FF", 
-            borderRadius: 4, paddingVertical: 18, alignItems: "center",
+            backgroundColor: (loading || !source) ? "#1A1A1A" : "#9A8174", 
+            borderRadius: 4, paddingVertical: 18, alignItems: "center", justifyContent: "center",
             opacity: creating ? 0.7 : 1
           }}
         >
           {creating ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text style={{ color: (loading || !source) ? "#444" : "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
-              INITIALIZE SYSTEM →
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text style={{ color: (loading || !source) ? "#444" : "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
+                INITIALIZE SYSTEM
+              </Text>
+              <LucideArrowRight color={(loading || !source) ? "#444" : "#000"} size={18} />
+            </View>
           )}
         </TouchableOpacity>
       </ScrollView>

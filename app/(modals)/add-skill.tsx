@@ -19,7 +19,7 @@ import {
 } from "@/services/storageService";
 import { insertSkillIntoResume } from "@/services/aiService";
 import { parseResumeDSL } from "@/services/dslParser";
-import { LucideZap, LucideCheckCircle2, LucideX } from "lucide-react-native";
+import { LucideZap, LucideCheckCircle2, LucideX, LucideArrowLeft, LucideCheck, LucideSparkles } from "lucide-react-native";
 
 const QUICK_SKILLS = [
   "Docker", "Kubernetes", "TypeScript", "React Native", "GraphQL",
@@ -223,9 +223,12 @@ export default function AddSkillModal() {
             >
               {loading
                 ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
-                    ✦ INSERT WITH AI
-                  </Text>
+                : <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <LucideSparkles color="#FFFFFF" size={16} />
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
+                      INSERT WITH AI
+                    </Text>
+                  </View>
               }
             </TouchableOpacity>
           </>
@@ -264,14 +267,20 @@ export default function AddSkillModal() {
                 activeOpacity={0.7}
                 style={{ flex: 1, backgroundColor: "#121212", borderRadius: 4, borderWidth: 1, borderColor: "#1F1F1F", paddingVertical: 14, alignItems: "center" }}
               >
-                <Text style={{ color: "#8E8E93", fontWeight: "700", fontSize: 13 }}>← REDO</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <LucideArrowLeft color="#8E8E93" size={16} />
+                  <Text style={{ color: "#8E8E93", fontWeight: "700", fontSize: 13 }}>REDO</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAccept}
                 activeOpacity={0.8}
                 style={{ flex: 2, backgroundColor: "#34C759", borderRadius: 4, paddingVertical: 14, alignItems: "center" }}
               >
-                <Text style={{ color: "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 1 }}>✓ APPLY TO RESUME</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <LucideCheck color="#000000" size={16} />
+                  <Text style={{ color: "#000000", fontWeight: "900", fontSize: 13, letterSpacing: 1 }}>APPLY TO RESUME</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </>

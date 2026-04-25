@@ -19,6 +19,8 @@ import {
   LucideFileText,
   LucideClipboard,
   LucideCheckCircle2,
+  LucideChevronLeft,
+  LucideArrowRight,
 } from "lucide-react-native";
 
 type Mode = "upload" | "paste" | "blank";
@@ -108,9 +110,9 @@ export default function ImportScreen() {
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [
-    { id: "upload", label: "UPLOAD FILE", icon: <LucideUpload color={mode === "upload" ? "#00F0FF" : "#8E8E93"} size={14} /> },
-    { id: "paste",  label: "PASTE TEXT",  icon: <LucideClipboard color={mode === "paste" ? "#00F0FF" : "#8E8E93"} size={14} /> },
-    { id: "blank",  label: "BLANK",       icon: <LucideFileText color={mode === "blank" ? "#00F0FF" : "#8E8E93"} size={14} /> },
+    { id: "upload", label: "UPLOAD FILE", icon: <LucideUpload color={mode === "upload" ? "#9A8174" : "#8E8E93"} size={14} /> },
+    { id: "paste",  label: "PASTE TEXT",  icon: <LucideClipboard color={mode === "paste" ? "#9A8174" : "#8E8E93"} size={14} /> },
+    { id: "blank",  label: "BLANK",       icon: <LucideFileText color={mode === "blank" ? "#9A8174" : "#8E8E93"} size={14} /> },
   ];
 
   const canContinue =
@@ -119,14 +121,15 @@ export default function ImportScreen() {
     (mode === "paste" && pastedText.trim().length >= 50);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050206" }}>
       <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
 
-        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24 }} activeOpacity={0.7}>
-          <Text style={{ color: "#00F0FF", fontSize: 14, fontWeight: "700" }}>← Back</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24, flexDirection: "row", alignItems: "center", gap: 6 }} activeOpacity={0.7}>
+          <LucideChevronLeft color="#9A8174" size={20} />
+          <Text style={{ color: "#9A8174", fontSize: 14, fontWeight: "700" }}>Back</Text>
         </TouchableOpacity>
 
-        <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>INITIALIZE</Text>
+        <Text style={{ color: "#9A8174", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>STUDIO INITIALIZE</Text>
         <Text style={{ fontSize: 26, fontWeight: "900", color: "#FFFFFF", marginBottom: 6 }}>Import Resume</Text>
         <Text style={{ fontSize: 13, color: "#8E8E93", marginBottom: 28, lineHeight: 20 }}>
           Upload your existing resume and AI will convert it to our format, preserving your template structure for future skill additions.
@@ -143,11 +146,11 @@ export default function ImportScreen() {
                 flex: 1, paddingVertical: 10, paddingHorizontal: 4, alignItems: "center",
                 borderRadius: 4, gap: 6,
                 backgroundColor: mode === t.id ? "#1A1A1A" : "transparent",
-                borderWidth: 1, borderColor: mode === t.id ? "#00F0FF" : "#1F1F1F",
+                borderWidth: 1, borderColor: mode === t.id ? "#9A8174" : "#1F1F1F",
               }}
             >
               {t.icon}
-              <Text style={{ color: mode === t.id ? "#00F0FF" : "#8E8E93", fontWeight: "800", fontSize: 9, letterSpacing: 1 }}>
+              <Text style={{ color: mode === t.id ? "#9A8174" : "#8E8E93", fontWeight: "800", fontSize: 9, letterSpacing: 1 }}>
                 {t.label}
               </Text>
             </TouchableOpacity>
@@ -170,13 +173,13 @@ export default function ImportScreen() {
               >
                 {loading ? (
                   <>
-                    <ActivityIndicator color="#00F0FF" size="large" />
-                    <Text style={{ color: "#00F0FF", fontSize: 13, fontWeight: "900", marginTop: 16, letterSpacing: 1 }}>
+                    <ActivityIndicator color="#9A8174" size="large" />
+                    <Text style={{ color: "#9A8174", fontSize: 13, fontWeight: "900", marginTop: 16, letterSpacing: 1 }}>
                       {ocrProgress !== null ? `SCANNING: ${ocrProgress}%` : "READING FILE..."}
                     </Text>
                     {ocrProgress !== null && (
                       <View style={{ width: 200, height: 2, backgroundColor: "#1A1A1A", marginTop: 12, borderRadius: 1, overflow: "hidden" }}>
-                        <View style={{ width: `${ocrProgress}%`, height: "100%", backgroundColor: "#00F0FF" }} />
+                        <View style={{ width: `${ocrProgress}%`, height: "100%", backgroundColor: "#9A8174" }} />
                       </View>
                     )}
                     <Text style={{ color: "#444", fontSize: 10, marginTop: 8, textAlign: "center" }}>
@@ -185,7 +188,7 @@ export default function ImportScreen() {
                   </>
                 ) : (
                   <>
-                    <LucideUpload color="#00F0FF" size={40} />
+                    <LucideUpload color="#9A8174" size={40} />
                     <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginTop: 16 }}>
                       Upload Resume
                     </Text>
@@ -208,7 +211,7 @@ export default function ImportScreen() {
                     </Text>
                   </View>
                   <TouchableOpacity onPress={handlePickFile}>
-                    <Text style={{ color: "#00F0FF", fontSize: 10, fontWeight: "800" }}>REPLACE</Text>
+                    <Text style={{ color: "#9A8174", fontSize: 10, fontWeight: "800" }}>REPLACE</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -228,7 +231,7 @@ export default function ImportScreen() {
 
             <View style={{ backgroundColor: "#0D0D0D", borderRadius: 8, borderWidth: 1, borderColor: "#1A1A1A", padding: 16, marginTop: 20 }}>
               <Text style={{ color: "#444", fontSize: 11, lineHeight: 18 }}>
-                <Text style={{ color: "#00F0FF", fontWeight: "800" }}>HOW IT WORKS: </Text>
+                <Text style={{ color: "#9A8174", fontWeight: "800" }}>STUDIO ENGINE: </Text>
                 AI reads your resume, converts it to our DSL format, and preserves your template structure. When you add new skills later, AI inserts them intelligently into the correct section.
               </Text>
             </View>
@@ -278,18 +281,21 @@ export default function ImportScreen() {
           disabled={loading || !canContinue}
           activeOpacity={0.8}
           style={{
-            backgroundColor: canContinue ? "#00F0FF" : "#1A1A1A",
-            borderRadius: 4, paddingVertical: 16, alignItems: "center", marginTop: 32,
+            backgroundColor: (loading || !canContinue) ? "#1A1A1A" : "#9A8174",
+            borderRadius: 4, paddingVertical: 18, alignItems: "center", justifyContent: "center", marginTop: 32,
             opacity: loading ? 0.7 : 1,
           }}
         >
           {loading
             ? <ActivityIndicator color="#000" />
-            : <Text style={{ color: canContinue ? "#000000" : "#444", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
-                {mode === "upload" && uploadedFile ? "CONVERT WITH AI →" :
-                 mode === "paste" ? "CONVERT WITH AI →" :
-                 "CONTINUE →"}
-              </Text>
+            : <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text style={{ color: canContinue ? "#000000" : "#444", fontWeight: "900", fontSize: 13, letterSpacing: 2 }}>
+                  {mode === "upload" && uploadedFile ? "CONVERT WITH AI" :
+                   mode === "paste" ? "CONVERT WITH AI" :
+                   "CONTINUE"}
+                </Text>
+                <LucideArrowRight color={canContinue ? "#000000" : "#444"} size={16} />
+              </View>
           }
         </TouchableOpacity>
 

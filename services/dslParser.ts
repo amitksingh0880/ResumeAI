@@ -75,6 +75,7 @@ export interface ResumeAST {
   contact: ResumeContact;
   summary: string;
   sections: ResumeSection[];
+  qrcode?: string; // URL for QR code
   raw: string; // original source
 }
 
@@ -160,6 +161,11 @@ export function parseResumeDSL(source: string): ResumeAST {
     if (line.startsWith("\\summary{")) {
       const { args } = extractArgs(line, 8, 1);
       ast.summary = args[0] || "";
+      continue;
+    }
+    if (line.startsWith("\\qrcode{")) {
+      const { args } = extractArgs(line, 7, 1);
+      ast.qrcode = args[0] || "";
       continue;
     }
     if (line.startsWith("\\resumestart") || line.startsWith("\\resumeend")) continue;
@@ -286,7 +292,9 @@ export function serializeAST(ast: ResumeAST): string {
   out += `\\name{${ast.name}}\n`;
   out += `\\role{${ast.role}}\n`;
   for (const c of ast.contact.raw) out += `\\contact{${c}}\n`;
-  if (ast.summary) out += `\\summary{${ast.summary}}\n\n`;
+  if (ast.summary) out += `\\summary{${ast.summary}}\n`;
+  if (ast.qrcode) out += `\\qrcode{${ast.qrcode}}\n`;
+  out += "\n";
 
   for (const section of ast.sections) {
     out += `\n\\section{${section.title}}\n`;
