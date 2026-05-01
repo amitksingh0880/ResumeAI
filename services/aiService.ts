@@ -1,54 +1,57 @@
 import { getSettings } from "./storageService";
 
 // Centralized REST API call to Groq (OpenAI compatible)
-async function callAI(passedApiKey: string, prompt: string) {
+async function callAI(passedApiKey: string, prompt: string, retries = 2) {
   const url = process.env.EXPO_PUBLIC_GROQ_API_URL || "https://api.groq.com/openai/v1/chat/completions";
   const model = process.env.EXPO_PUBLIC_GROQ_MODEL_NAME || "llama-3.1-8b-instant";
-  
-  // Use env key if available, otherwise use the one passed from settings
   const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY || passedApiKey;
-
-  // Fetch settings for temperature
   const settings = await getSettings();
   const temperature = settings.aiCreativity === "high" ? 0.7 : 0.1;
 
   if (!apiKey) {
     throw new Error("No Groq API Key found. Please add it to your .env or Settings.");
   }
-  
-  console.log(`AI: Calling Groq with model ${model}...`);
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        {
-          role: "user",
-          content: prompt
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      console.log(`AI: Calling Groq (Attempt ${attempt + 1}/${retries + 1})...`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: temperature,
+          max_tokens: 2000 // Reduced from 4000 to save on TPM limits
+        })
+      });
+
+      if (response.status === 429) {
+        if (attempt < retries) {
+          const waitTime = Math.pow(2, attempt) * 2000;
+          console.warn(`AI: Rate limited (429). Retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
         }
-      ],
-      temperature: temperature,
-      max_tokens: 4000
-    })
-  });
+        throw new Error("Rate limit exceeded. Please try again in a few seconds.");
+      }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const msg = errorData.error?.message || `HTTP error! status: ${response.status}`;
-    console.error("Groq API Error Detail:", errorData);
-    throw new Error(msg);
-  }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+      }
 
-  const data = await response.json();
-  if (!data.choices || data.choices.length === 0) {
-    throw new Error("No completion returned from Groq API");
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error: any) {
+      if (attempt === retries) throw error;
+      console.warn(`AI: Attempt ${attempt + 1} failed: ${error.message}. Retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
-  return data.choices[0].message.content;
 }
 
 export interface SkillInsertionResult {
@@ -358,10 +361,11 @@ export async function generateCareerRoadmap(
   currentSkills: string[],
   currentRole: string
 ): Promise<{ steps: CareerStep[]; summary: string }> {
+  const slicedSkills = currentSkills.slice(0, 15);
   const prompt = `You are a career strategist. Based on these skills and role, generate a 3-step growth roadmap.
 
   Current Role: ${currentRole}
-  Current Skills: ${currentSkills.join(", ")}
+  Current Skills: ${slicedSkills.join(", ")}
 
   RESPOND WITH VALID JSON ONLY:
   {

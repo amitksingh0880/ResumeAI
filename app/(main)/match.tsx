@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { scoreJobMatch } from "@/services/aiService";
 import { getActiveDocumentId, getApiKey, getDocumentById, getSettings } from "@/services/storageService";
@@ -35,27 +36,49 @@ export default function MatchScreen() {
   );
 
   async function handleScore() {
-    if (jd.trim().length < 50) {
-      Alert.alert("Too short", "Please paste the full job description.");
+    console.log("Match: Starting analysis for JD length:", jd.trim().length);
+    
+    if (jd.trim().length < 10) {
+      if (Platform.OS === 'web') {
+        window.alert("Please paste a bit more of the job description for a better analysis.");
+      } else {
+        Alert.alert("Too short", "Please paste the full job description.");
+      }
       return;
     }
+    
     const apiKey = await getApiKey();
     if (!apiKey) {
-      Alert.alert("API Key Required", "Add your Groq API key in Settings.");
+      if (Platform.OS === 'web') {
+        window.alert("Groq API Key Required. Please add it in Settings.");
+      } else {
+        Alert.alert("API Key Required", "Add your Groq API key in Settings.");
+      }
       return;
     }
+    
     const id = await getActiveDocumentId();
     const doc = id ? await getDocumentById(id) : null;
     if (!doc) {
-      Alert.alert("No Resume", "Please create a resume first.");
+      if (Platform.OS === 'web') {
+        window.alert("Please create or import a resume first.");
+      } else {
+        Alert.alert("No Resume", "Please create a resume first.");
+      }
       return;
     }
+
     setLoading(true);
     try {
       const res = await scoreJobMatch(apiKey, doc.currentSource, jd);
       setResult(res);
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "AI scoring failed.");
+      console.error("Match Error:", e);
+      if (Platform.OS === 'web') {
+        window.alert("AI analysis failed: " + (e?.message || "Unknown error"));
+      } else {
+        Alert.alert("Error", e?.message ?? "AI scoring failed.");
+      }
     } finally {
       setLoading(false);
     }
