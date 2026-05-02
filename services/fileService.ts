@@ -39,46 +39,48 @@ export async function pickAndReadFile(
   const asset = result.assets[0];
   const { uri, name, mimeType } = asset;
 
-  let text = "";
+  let rawText = "";
 
-  if (Platform.OS === "web") {
-    // On web, uri is a data: or blob: URL — fetch it as text
-    try {
+  try {
+    if (Platform.OS === "web") {
+      // On web, uri is a data: or blob: URL — fetch it as text
       const response = await fetch(uri);
-      const rawText = await response.text();
+      rawText = await response.text();
+    } else {
+      // Native: use expo-file-system
+      const FileSystem = await import("expo-file-system");
+      rawText = await FileSystem.readAsStringAsync(uri, { encoding: "utf8" });
+    }
+  } catch (e: any) {
+    console.error("File Read Error:", e);
+    throw new Error("Could not read file on this device. Please try copying and pasting the text instead.");
+  }
 
-      // For PDFs: strip binary junk, extract readable text
-      if (mimeType === "application/pdf" || name.endsWith(".pdf")) {
-        text = extractReadableTextFromPDF(rawText);
-        
-        // If standard extraction failed, try OCR fallback
-        if (!text && Platform.OS === "web") {
-          text = await performWebOCR(uri, onProgress);
-        }
-      } else {
-        text = rawText;
-      }
-    } catch (e: any) {
-      throw new Error(e.message || "Could not read file. Try copying and pasting the text instead.");
+  let text = "";
+  const isPdf = mimeType === "application/pdf" || name?.toLowerCase().endsWith(".pdf");
+
+  if (isPdf) {
+    // Attempt PDF text extraction (cross-platform)
+    text = extractReadableTextFromPDF(rawText);
+    
+    // If standard extraction failed on web, try OCR fallback
+    if (!text && Platform.OS === "web") {
+      text = await performWebOCR(uri, onProgress);
     }
   } else {
-    // Native: use expo-file-system
-    try {
-      const { readAsStringAsync } = await import("expo-file-system");
-      text = await readAsStringAsync(uri, { encoding: "utf8" });
-    } catch {
-      throw new Error("Could not read file on this device.");
-    }
+    text = rawText;
   }
 
   if (!text || text.trim().length < 30) {
     throw new Error(
-      "Could not extract readable text from this file.\n\nFor PDFs, please copy and paste your resume text instead."
+      "Could not extract readable text from this file.\n\n" +
+      (isPdf ? "For PDFs, please try copying and pasting your resume text instead." : "The file appears to be empty or too short.")
     );
   }
 
   return { name: name ?? "resume", text: text.trim(), mimeType: mimeType ?? "text/plain" };
 }
+
 
 /**
  * Best-effort PDF text extraction: find runs of printable ASCII
